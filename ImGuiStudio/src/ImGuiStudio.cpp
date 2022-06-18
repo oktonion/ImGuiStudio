@@ -19,22 +19,58 @@ void ImGuiStudio::DrawInterface()
     if (ImGui::BeginMenuBar())
     {
 
-        if (ImGui::BeginMenu("Project"))
+        if (Widgets::Menus::BeginMenu("Project"))
         {
-            if (ImGui::MenuItem("Save"))
+            if (Widgets::Menus::MenuItem("Save"))
             {
                 
             }
 
-            if (ImGui::MenuItem("Open"))
+            if (Widgets::Menus::MenuItem("Open"))
             {
                 
             }
 
-            ImGui::EndMenu();
+            Widgets::Menus::EndMenu();
         }
-        ImGui::EndMenuBar();
+        Widgets::Menus::EndMenuBar();
     } 
+
+    if (ImGui::BeginChild("Toolbox", { 200, 0 }))
+    {
+
+        if (ImGui::CollapsingHeader("ToolBox"))
+        {
+            if (ImGui::CollapsingHeader("Main"))
+            {
+                if (Widgets::Main::Button("ArrowButton"))
+                {
+
+                } ImGui::Separator();
+
+                if (Widgets::Main::Button("Bullet"))
+                {
+
+                } ImGui::Separator();
+
+                if (Widgets::Main::Button("Button"))
+                {
+
+                } ImGui::Separator();
+
+                if (Widgets::Main::Button("Checkbox"))
+                {
+
+                } ImGui::Separator();
+                
+                if (Widgets::Main::Button("Checkbox Flags"))
+                {
+
+                } ImGui::Separator();
+            }
+        }
+        ImGui::EndChild();
+    }
 }
 
 void ImGuiStudio::End()
