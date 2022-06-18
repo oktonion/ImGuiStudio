@@ -16,25 +16,25 @@ bool ImGuiStudio::Begin(const ImVec4 &dim, bool *is_open)
 
 void ImGuiStudio::DrawInterface()
 {
-	if (ImGui::BeginMenuBar())
-	{
+    if (ImGui::BeginMenuBar())
+    {
 
-		if (ImGui::BeginMenu("Project"))
-		{
-			if (ImGui::MenuItem("Save"))
-			{
-				
-			}
+        if (ImGui::BeginMenu("Project"))
+        {
+            if (ImGui::MenuItem("Save"))
+            {
+                
+            }
 
-			if (ImGui::MenuItem("Open"))
-			{
-				
-			}
+            if (ImGui::MenuItem("Open"))
+            {
+                
+            }
 
-			ImGui::EndMenu();
-		}
-		ImGui::EndMenuBar();
-	} 
+            ImGui::EndMenu();
+        }
+        ImGui::EndMenuBar();
+    } 
 }
 
 void ImGuiStudio::End()
