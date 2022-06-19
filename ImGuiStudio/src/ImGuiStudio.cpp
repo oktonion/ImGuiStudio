@@ -1,17 +1,21 @@
 #include "./../include/ImGuiStudio.h"
 
-bool ImGuiStudio::Begin(const ImVec4 &dim, bool *is_open)
+bool ImGuiStudio::Begin(ImVec4 &dim, bool *is_open)
 {
-    ImGui::SetNextWindowSize({ dim.z, dim.w });
-    ImGui::SetNextWindowPos({ dim.x, dim.y });
-    return ImGui::Begin("Dear ImGui Studio", is_open,
+    bool result = ImGui::Begin("Dear ImGui Studio", is_open,
         ImGuiWindowFlags_NoBringToFrontOnFocus 
         | ImGuiWindowFlags_MenuBar 
-        | ImGuiWindowFlags_NoResize
-        | ImGuiWindowFlags_NoMove
+        //| ImGuiWindowFlags_NoResize
+        //| ImGuiWindowFlags_NoMove
         | ImGuiWindowFlags_NoCollapse
-        | ImGuiWindowFlags_MenuBar
     );
+
+    dim.w = ImGui::GetWindowSize().x;
+    dim.z = ImGui::GetWindowSize().y;
+    dim.x = ImGui::GetWindowPos().x;
+    dim.y = ImGui::GetWindowPos().y;
+
+    return result;
 }
 
 void ImGuiStudio::DrawInterface()
@@ -38,9 +42,18 @@ void ImGuiStudio::DrawInterface()
 
     if (ImGui::BeginChild("Toolbox", { 200, 0 }))
     {
-
+        const float tool_box_shift = 10.f;
+        enum {
+            collapsing_header_lvl1 = 1, 
+            collapsing_header_lvl2,
+            collapsing_header_lvl3
+        };
+        
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + tool_box_shift * collapsing_header_lvl1);
         if (ImGui::CollapsingHeader("ToolBox"))
         {
+            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + tool_box_shift * collapsing_header_lvl2);
+            ImGui::BeginGroup();
             if (ImGui::CollapsingHeader("Main"))
             {
                 if (Widgets::Main::Button("ArrowButton"))
@@ -68,7 +81,9 @@ void ImGuiStudio::DrawInterface()
 
                 } ImGui::Separator();
             }
+            ImGui::EndGroup();
         }
+        
         ImGui::EndChild();
     }
 }

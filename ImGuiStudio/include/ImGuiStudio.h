@@ -95,7 +95,7 @@ namespace ImGuiStudio
 
     } // namespace Widgets
 
-    bool Begin(const ImVec4& dim, bool* opened = NULL); // create Studio GUI main window
+    bool Begin(ImVec4& dim, bool* opened = NULL); // create Studio GUI main window
     void DrawInterface();
     void End(); // end Studio GUI main window
 
