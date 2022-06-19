@@ -105,5 +105,7 @@ void ImGuiStudio::End(ImVec4& dim)
     dim.x = ImGui::GetWindowPos().x;
     dim.y = ImGui::GetWindowPos().y;
 
+    ImGui::SetWindowPos({ 0.f, 0.f });
+
     ImGui::End();
 }
