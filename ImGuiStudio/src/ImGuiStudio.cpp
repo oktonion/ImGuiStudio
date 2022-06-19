@@ -1,6 +1,6 @@
 #include "./../include/ImGuiStudio.h"
 
-bool ImGuiStudio::Begin(ImVec4 &dim, bool *is_open)
+bool ImGuiStudio::Begin(const ImVec4 &dim, bool *is_open)
 {
     bool result = ImGui::Begin("Dear ImGui Studio", is_open,
         ImGuiWindowFlags_NoBringToFrontOnFocus 
@@ -10,12 +10,21 @@ bool ImGuiStudio::Begin(ImVec4 &dim, bool *is_open)
         | ImGuiWindowFlags_NoCollapse
     );
 
-    dim.w = ImGui::GetWindowSize().x;
-    dim.z = ImGui::GetWindowSize().y;
-    dim.x = ImGui::GetWindowPos().x;
-    dim.y = ImGui::GetWindowPos().y;
+    ImGui::SetWindowSize({ dim.z, dim.w });
+    ImGui::SetWindowPos({ dim.x, dim.y });
 
     return result;
+}
+
+bool ImGuiStudio::Begin(bool *is_open)
+{
+    return ImGui::Begin("Dear ImGui Studio", is_open,
+        ImGuiWindowFlags_NoBringToFrontOnFocus
+        | ImGuiWindowFlags_MenuBar
+        //| ImGuiWindowFlags_NoResize
+        //| ImGuiWindowFlags_NoMove
+        | ImGuiWindowFlags_NoCollapse
+    );
 }
 
 void ImGuiStudio::DrawInterface()
@@ -88,7 +97,13 @@ void ImGuiStudio::DrawInterface()
     }
 }
 
-void ImGuiStudio::End()
+void ImGuiStudio::End(ImVec4& dim)
 {
+
+    dim.z = ImGui::GetWindowSize().x;
+    dim.w = ImGui::GetWindowSize().y;
+    dim.x = ImGui::GetWindowPos().x;
+    dim.y = ImGui::GetWindowPos().y;
+
     ImGui::End();
 }
