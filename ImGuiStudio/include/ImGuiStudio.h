@@ -22,6 +22,16 @@ namespace ImGuiStudio
     {
         struct ID; // unique ID type for serialization purpose
 
+        namespace Windows
+        {
+            struct ID; // unique ID type for serialization purpose
+
+            using ImGui::Begin;
+            using ImGui::End;
+            using ImGui::BeginChild;
+            using ImGui::EndChild;
+        } // namespace Windows
+
         namespace Text
         {
             struct ID; // unique ID type for serialization purpose

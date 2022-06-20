@@ -1,5 +1,8 @@
 #include "./../include/ImGuiStudio.h"
 
+#include <vector>
+#include <string>
+
 bool ImGuiStudio::Begin(const ImVec4 &dim, bool *is_open)
 {
     bool result = ImGui::Begin("Dear ImGui Studio", is_open,
@@ -25,6 +28,39 @@ bool ImGuiStudio::Begin(bool *is_open)
         //| ImGuiWindowFlags_NoMove
         | ImGuiWindowFlags_NoCollapse
     );
+}
+
+struct WidgetBasic
+{
+    std::string name;
+    ImVec4 dim;
+};
+
+struct Widget
+    : WidgetBasic
+{
+    void (*begin)(Widget&);
+    void (*end)(Widget&);
+
+    struct
+    {
+        void (*begin)(Widget&);
+        void (*end)(Widget&);
+    } props;
+
+    Widget() :
+        begin(NULL), end(NULL) 
+    {
+        props.begin = begin;
+        props.end = end;
+    }
+
+    std::vector<Widget> child;
+};
+
+namespace
+{
+    std::vector<Widget> TopWindows;
 }
 
 void ImGuiStudio::DrawInterface()
@@ -58,10 +94,9 @@ void ImGuiStudio::DrawInterface()
             collapsing_header_lvl3
         };
         
-        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + tool_box_shift * collapsing_header_lvl1);
         if (ImGui::CollapsingHeader("ToolBox"))
         {
-            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + tool_box_shift * collapsing_header_lvl2);
+            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + tool_box_shift * collapsing_header_lvl1);
             ImGui::BeginGroup();
             if (ImGui::CollapsingHeader("Main"))
             {
@@ -90,10 +125,74 @@ void ImGuiStudio::DrawInterface()
 
                 } ImGui::Separator();
             }
+            if (ImGui::CollapsingHeader("Windows"))
+            {
+                if (Widgets::Main::Button("Top Window"))
+                {
+                    Widget top_window;
+                    struct lambdas
+                    {
+                        static void begin(Widget& that)
+                        {
+                            using namespace ImGuiStudio::Widgets;
+
+                            Windows::Begin(that.name.c_str());
+                        }
+
+                        static void end(Widget& that)
+                        {
+                            using namespace ImGuiStudio::Widgets;
+
+                            Windows::End();
+                        }
+
+                        static void begin_prop(Widget& that)
+                        {
+                            using namespace ImGuiStudio::Widgets;
+
+                            Text::BulletText("Test window prop");
+                        }
+
+                        static void end_prop(Widget& that)
+                        {
+                            using namespace ImGuiStudio::Widgets;
+
+                            
+                        }
+                    };
+                    top_window.begin = &lambdas::begin;
+                    top_window.end = &lambdas::end;
+                    top_window.props.begin = &lambdas::begin_prop;
+                    top_window.props.end = &lambdas::end_prop;
+                    top_window.name = "form";
+
+                    TopWindows.push_back(top_window);
+                } ImGui::Separator();
+
+                if (Widgets::Main::Button("Child Window"))
+                {
+
+                } ImGui::Separator();
+            }
             ImGui::EndGroup();
         }
         
         ImGui::EndChild();
+    }
+
+    ImGui::SameLine();
+
+    if (ImGui::BeginTabBar("Forms"))
+    {
+        for (std::size_t i = 0; i < TopWindows.size(); ++i)
+        {
+            if (ImGui::BeginTabItem(TopWindows[i].name.c_str()))
+            {
+                ImGui::EndTabItem();
+            }
+
+        }
+        ImGui::EndTabBar();
     }
 }
 
