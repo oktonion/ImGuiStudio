@@ -336,13 +336,13 @@ namespace
 
                 Text::Text(that.name.c_str());
 
-                if (ImGui::IsItemFocused())
+                if (ImGui::IsItemFocused() || ImGui::IsItemClicked())
                     selected = that;
                 
                 if (that.dim.z > 0.f)
                     ImGui::PopItemWidth();
 
-                if (ImGui::BeginDragDropSource())
+                if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
                 {
                     ImGui::SetDragDropPayload("DND_WIDGET", &that, sizeof(that));
                     ImGui::EndDragDropSource();
@@ -550,8 +550,13 @@ void ImGuiStudio::DrawInterface()
     } ImGui::EndChild();
 
     ImGui::SameLine();
-    if (ImGui::Begin("Properties"))
+    if (ImGui::Begin("Properties", NULL, 
+        0
+        | ImGuiWindowFlags_AlwaysAutoResize
+        | ImGuiWindowFlags_NoResize
+    ))
     {
+        ImGui::Dummy({ 200.f, 10.f });
         if (selected.props.begin)
         {
             ImGui::BeginGroup();
@@ -562,6 +567,7 @@ void ImGuiStudio::DrawInterface()
             }
             ImGui::EndGroup();
         }
+        
 
     } ImGui::End();
 
