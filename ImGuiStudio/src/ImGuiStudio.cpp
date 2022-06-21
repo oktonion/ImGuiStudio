@@ -2,13 +2,13 @@
 
 #include <vector>
 #include <string>
+#include <map>
 
-bool ImGuiStudio::Begin(const ImVec4 &dim, bool *is_open)
+bool ImGuiStudio::Begin(const ImVec2 &size, bool *is_open)
 {
     bool result = Begin(is_open);
 
-    ImGui::SetWindowSize({ dim.z, dim.w });
-    ImGui::SetWindowPos({ dim.x, dim.y });
+    ImGui::SetWindowSize({ size.x, size.y });
 
     return result;
 }
@@ -84,6 +84,231 @@ struct Widget
 namespace
 {
     std::vector<Widget> TopWindows;
+    std::pair<Widget, bool> CursorWidget;
+    std::map<std::string, size_t> WidgetID;
+
+    void DrawCursorWidget(Widget &that)
+    {
+        if (CursorWidget.second)
+        {
+            if (ImGui::IsMouseDragging(ImGuiMouseButton_Left))
+            {
+                CursorWidget.first.dim.z = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left).x;
+                CursorWidget.first.dim.w = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left).y;
+
+                ImGui::SetCursorPos({ CursorWidget.first.dim.x , CursorWidget.first.dim.y });
+                CursorWidget.first.draw();
+            }
+            else if (ImGui::IsMouseDown(ImGuiMouseButton_Left))
+            {
+                CursorWidget.first.dim.x = ImGui::GetMousePos().x - ImGui::GetCursorScreenPos().x;
+                CursorWidget.first.dim.y = ImGui::GetMousePos().y - ImGui::GetCursorScreenPos().y;
+                CursorWidget.first.dim.z = 0.f;
+                CursorWidget.first.dim.w = 0.f;
+            }
+            else if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+            {
+                if (CursorWidget.first.dim.x != 0.f || CursorWidget.first.dim.y != 0.f)
+                {
+                    that.child.push_back(CursorWidget.first);
+                    CursorWidget.second = false;
+                }
+            }
+
+        }
+    }
+
+    void CreateWindow()
+    {
+        Widget top_window;
+        struct lambdas
+        {
+            static void begin(Widget& that)
+            {
+                using namespace ImGuiStudio::Widgets;
+
+                Windows::BeginChild(that.name.c_str(), { that.dim.z, that.dim.w }, true);
+
+                DrawCursorWidget(that);
+            }
+
+            static void end(Widget& that)
+            {
+                using namespace ImGuiStudio::Widgets;
+
+                Windows::EndChild();
+            }
+
+            static void begin_prop(Widget& that)
+            {
+                using namespace ImGuiStudio::Widgets;
+
+                Text::BulletText("Test window prop");
+            }
+
+            static void end_prop(Widget& that)
+            {
+                using namespace ImGuiStudio::Widgets;
+            }
+
+            static std::string begin_to_string(Widget& that)
+            {
+                return
+                    "ImGui::Begin(" + that.name + ");";
+            }
+
+            static std::string end_to_string(Widget& that)
+            {
+                return
+                    "ImGui::End();";
+            }
+        };
+        top_window.begin = &lambdas::begin;
+        top_window.end = &lambdas::end;
+        top_window.props.begin = &lambdas::begin_prop;
+        top_window.props.end = &lambdas::end_prop;
+        top_window.begin_to_string = &lambdas::begin_to_string;
+        top_window.end_to_string = &lambdas::end_to_string;
+
+        top_window.name = "form" + std::to_string(TopWindows.size());
+
+        TopWindows.push_back(top_window);
+    }
+    void CreateChild(Widget& dnd_widget, bool reset = true)
+    {
+        if (reset) dnd_widget = Widget();
+        struct lambdas
+        {
+            static void begin(Widget& that)
+            {
+                using namespace ImGuiStudio::Widgets;
+
+                Windows::BeginChild(that.name.c_str());
+
+                DrawCursorWidget(that);
+
+                if (ImGui::BeginDragDropSource())
+                {
+                    Widget* ptr = &that;
+                    ImGui::SetDragDropPayload("DND_WIDGET", &ptr, sizeof(ptr));
+                    ImGui::EndDragDropSource();
+                }
+
+                if (ImGui::BeginDragDropTarget())
+                {
+                    ImGuiDragDropFlags target_flags = 0;
+                    //target_flags |= ImGuiDragDropFlags_AcceptBeforeDelivery;    // Don't wait until the delivery (release mouse button on a target) to do something
+                    //target_flags |= ImGuiDragDropFlags_AcceptNoDrawDefaultRect; // Don't display the yellow rectangle
+                    if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DND_WIDGET", target_flags))
+                    {
+                        Widget* ptr = (Widget*)payload->Data;
+                        that.child.push_back(*ptr);
+                    }
+                    ImGui::EndDragDropTarget();
+                }
+            }
+
+            static void end(Widget& that)
+            {
+                using namespace ImGuiStudio::Widgets;
+
+                Windows::EndChild();
+            }
+
+            static void begin_prop(Widget& that)
+            {
+                using namespace ImGuiStudio::Widgets;
+
+                Text::BulletText("Test child window prop");
+            }
+
+            static void end_prop(Widget& that)
+            {
+                using namespace ImGuiStudio::Widgets;
+            }
+
+            static std::string begin_to_string(Widget& that)
+            {
+                return
+                    "ImGui::BeginChild(" + that.name + ");";
+            }
+
+            static std::string end_to_string(Widget& that)
+            {
+                return
+                    "ImGui::EndChild();";
+            }
+        };
+        dnd_widget.begin = &lambdas::begin;
+        dnd_widget.end = &lambdas::end;
+        dnd_widget.props.begin = &lambdas::begin_prop;
+        dnd_widget.props.end = &lambdas::end_prop;
+        dnd_widget.begin_to_string = &lambdas::begin_to_string;
+        dnd_widget.end_to_string = &lambdas::end_to_string;
+
+        dnd_widget.name = "child form" + std::to_string(WidgetID["child form"]++);
+
+    }
+    void CreateButton(Widget& dnd_widget, bool reset = true)
+    {
+        if (reset) dnd_widget = Widget();
+        struct lambdas
+        {
+            static void begin(Widget& that)
+            {
+                using namespace ImGuiStudio::Widgets;
+
+                if (that.dim.x != 0.f || that.dim.y != 0.f)
+                    ImGui::SetCursorPos({ that.dim.x, that.dim.y });
+                Main::Button(that.name.c_str(), { that.dim.z, that.dim.w });
+                
+                if (ImGui::BeginDragDropSource())
+                {
+                    ImGui::SetDragDropPayload("DND_WIDGET", &that, sizeof(that));
+                    ImGui::EndDragDropSource();
+                }
+            }
+
+            static void end(Widget& that)
+            {
+                using namespace ImGuiStudio::Widgets;
+
+            }
+
+            static void begin_prop(Widget& that)
+            {
+                using namespace ImGuiStudio::Widgets;
+
+                Text::BulletText("Test child window prop");
+            }
+
+            static void end_prop(Widget& that)
+            {
+                using namespace ImGuiStudio::Widgets;
+            }
+
+            static std::string begin_to_string(Widget& that)
+            {
+                return
+                    "ImGui::Button(" + that.name + ");";
+            }
+
+            static std::string end_to_string(Widget& that)
+            {
+                return
+                    "";
+            }
+        };
+        dnd_widget.begin = &lambdas::begin;
+        dnd_widget.end = &lambdas::end;
+        dnd_widget.props.begin = &lambdas::begin_prop;
+        dnd_widget.props.end = &lambdas::end_prop;
+        dnd_widget.begin_to_string = &lambdas::begin_to_string;
+        dnd_widget.end_to_string = &lambdas::end_to_string;
+
+        dnd_widget.name = "button" + std::to_string(WidgetID["button"]++);
+
+    }
 }
 
 void ImGuiStudio::DrawInterface()
@@ -119,6 +344,8 @@ void ImGuiStudio::DrawInterface()
         
         if (ImGui::CollapsingHeader("ToolBox"))
         {
+            Widget dnd_widget;
+
             ImGui::SetCursorPosX(ImGui::GetCursorPosX() + tool_box_shift * collapsing_header_lvl1);
             ImGui::BeginGroup();
             if (ImGui::CollapsingHeader("Main"))
@@ -135,8 +362,16 @@ void ImGuiStudio::DrawInterface()
 
                 if (Widgets::Main::Button("Button"))
                 {
-
-                } ImGui::Separator();
+                    CreateButton(CursorWidget.first);
+                    CursorWidget.second = true;
+                } 
+                else if (ImGui::BeginDragDropSource())
+                {
+                    CreateButton(dnd_widget);
+                    ImGui::SetDragDropPayload("DND_WIDGET", &dnd_widget, sizeof(dnd_widget));
+                    ImGui::EndDragDropSource();
+                }
+                ImGui::Separator();
 
                 if (Widgets::Main::Button("Checkbox"))
                 {
@@ -152,161 +387,20 @@ void ImGuiStudio::DrawInterface()
             {
                 if (Widgets::Main::Button("Top Window"))
                 {
-                    Widget top_window;
-                    struct lambdas
-                    {
-                        static void begin(Widget& that)
-                        {
-                            using namespace ImGuiStudio::Widgets;
-
-                            Windows::BeginChild(that.name.c_str(), {that.dim.z, that.dim.w});
-
-                            if (ImGui::BeginDragDropSource())
-                            {
-                                Widget* ptr = &that;
-                                ImGui::SetDragDropPayload("DND_WIDGET", &ptr, sizeof(ptr));
-                                ImGui::EndDragDropSource();
-                            }
-
-                            if (ImGui::BeginDragDropTarget())
-                            {
-                                ImGuiDragDropFlags target_flags = 0;
-                                target_flags |= ImGuiDragDropFlags_AcceptBeforeDelivery;    // Don't wait until the delivery (release mouse button on a target) to do something
-                                //target_flags |= ImGuiDragDropFlags_AcceptNoDrawDefaultRect; // Don't display the yellow rectangle
-                                if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DND_WIDGET", target_flags))
-                                {
-                                    Widget* ptr = *(Widget**)payload->Data;
-                                    that.child.push_back(*ptr);
-                                }
-                                ImGui::EndDragDropTarget();
-                            }
-                        }
-
-                        static void end(Widget& that)
-                        {
-                            using namespace ImGuiStudio::Widgets;
-
-                            ImGui::Button("awdawdawdawdaw");
-
-                            Windows::EndChild();
-                        }
-
-                        static void begin_prop(Widget& that)
-                        {
-                            using namespace ImGuiStudio::Widgets;
-
-                            Text::BulletText("Test window prop");
-                        }
-
-                        static void end_prop(Widget& that)
-                        {
-                            using namespace ImGuiStudio::Widgets;
-                        }
-
-                        static std::string begin_to_string(Widget& that)
-                        {
-                            return
-                                "ImGui::Begin(" + that.name + ");";
-                        }
-
-                        static std::string end_to_string(Widget& that)
-                        {
-                            return
-                                "ImGui::End();";
-                        }
-                    };
-                    top_window.begin = &lambdas::begin;
-                    top_window.end = &lambdas::end;
-                    top_window.props.begin = &lambdas::begin_prop;
-                    top_window.props.end = &lambdas::end_prop;
-                    top_window.begin_to_string = &lambdas::begin_to_string;
-                    top_window.end_to_string = &lambdas::end_to_string;
-
-                    top_window.name = "form" + std::to_string(TopWindows.size());
-
-                    TopWindows.push_back(top_window);
+                    CreateWindow();
                 } ImGui::Separator();
-
-                Widget *dnd_widget = NULL;
 
                 if (Widgets::Main::Button("Child Window"))
                 {
-                    dnd_widget = new Widget();
-                    struct lambdas
-                    {
-                        static void begin(Widget& that)
-                        {
-                            using namespace ImGuiStudio::Widgets;
-
-                            Windows::BeginChild(that.name.c_str());
-
-                            if (ImGui::BeginDragDropSource())
-                            {
-                                Widget* ptr = &that;
-                                ImGui::SetDragDropPayload("DND_WIDGET", &ptr, sizeof(ptr));
-                                ImGui::EndDragDropSource();
-                            }
-
-                            if (ImGui::BeginDragDropTarget())
-                            {
-                                ImGuiDragDropFlags target_flags = 0;
-                                target_flags |= ImGuiDragDropFlags_AcceptBeforeDelivery;    // Don't wait until the delivery (release mouse button on a target) to do something
-                                //target_flags |= ImGuiDragDropFlags_AcceptNoDrawDefaultRect; // Don't display the yellow rectangle
-                                if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DND_WIDGET", target_flags))
-                                {
-                                    Widget* ptr = *(Widget**)payload->Data;
-                                    that.child.push_back(*ptr);
-                                }
-                                ImGui::EndDragDropTarget();
-                            }
-                        }
-
-                        static void end(Widget& that)
-                        {
-                            using namespace ImGuiStudio::Widgets;
-
-                            Windows::EndChild();
-                        }
-
-                        static void begin_prop(Widget& that)
-                        {
-                            using namespace ImGuiStudio::Widgets;
-
-                            Text::BulletText("Test child window prop");
-                        }
-
-                        static void end_prop(Widget& that)
-                        {
-                            using namespace ImGuiStudio::Widgets;
-                        }
-
-                        static std::string begin_to_string(Widget& that)
-                        {
-                            return
-                                "ImGui::BeginChild(" + that.name + ");";
-                        }
-
-                        static std::string end_to_string(Widget& that)
-                        {
-                            return
-                                "ImGui::EndChuld();";
-                        }
-                    };
-                    dnd_widget->begin = &lambdas::begin;
-                    dnd_widget->end = &lambdas::end;
-                    dnd_widget->props.begin = &lambdas::begin_prop;
-                    dnd_widget->props.end = &lambdas::end_prop;
-                    dnd_widget->begin_to_string = &lambdas::begin_to_string;
-                    dnd_widget->end_to_string = &lambdas::end_to_string;
-
-                    dnd_widget->name = "child form" + std::to_string(TopWindows.size());
-
+                    
                 } 
-                if (ImGui::BeginDragDropSource())
+                else if (ImGui::BeginDragDropSource())
                 {
+                    CreateChild(dnd_widget);
                     ImGui::SetDragDropPayload("DND_WIDGET", &dnd_widget, sizeof(dnd_widget));
                     ImGui::EndDragDropSource();
                 }
+
                 ImGui::Separator();
             }
             ImGui::EndGroup();
@@ -318,6 +412,7 @@ void ImGuiStudio::DrawInterface()
     static std::vector<std::size_t> windows_to_remove;
 
     ImGui::SameLine();
+    ImGui::BeginGroup();
     if (ImGui::BeginTabBar("##tabs", 
         0
         | ImGuiTabBarFlags_AutoSelectNewTabs 
@@ -334,6 +429,18 @@ void ImGuiStudio::DrawInterface()
             ))
             {
                 TopWindows[i].draw();
+                if (ImGui::BeginDragDropTarget())
+                {
+                    ImGuiDragDropFlags target_flags = 0;
+                    //target_flags |= ImGuiDragDropFlags_AcceptBeforeDelivery;    // Don't wait until the delivery (release mouse button on a target) to do something
+                    //target_flags |= ImGuiDragDropFlags_AcceptNoDrawDefaultRect; // Don't display the yellow rectangle
+                    if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DND_WIDGET", target_flags))
+                    {
+                        Widget* ptr = (Widget*)payload->Data;
+                        TopWindows[i].child.push_back(*ptr);
+                    }
+                    ImGui::EndDragDropTarget();
+                }
                 ImGui::EndTabItem();
             }
 
@@ -343,6 +450,8 @@ void ImGuiStudio::DrawInterface()
 
         ImGui::EndTabBar();
     }
+
+    ImGui::EndGroup();
 
     for (std::size_t i = 0; i < windows_to_remove.size(); ++i)
     {
@@ -372,20 +481,19 @@ void ImGuiStudio::DrawInterface()
         }
     }
 
-
-   
+    if (CursorWidget.second)
+    {
+        ImGui::SetCursorPos({ ImGui::GetMousePos().x + 3.f, ImGui::GetMousePos().y + 3.f });
+        if (!ImGui::IsMouseDragging(ImGuiMouseButton_Left))
+            CursorWidget.first.draw();
+        if (ImGui::IsMouseDown(ImGuiMouseButton_Right))
+        {
+            CursorWidget.second = false;
+        }
+    }
 }
 
-void ImGuiStudio::End(ImVec4& dim)
+void ImGuiStudio::End()
 {
-
-    dim.z = ImGui::GetWindowSize().x;
-    dim.w = ImGui::GetWindowSize().y;
-
-
-
-
     ImGui::End();
-
-
 }
