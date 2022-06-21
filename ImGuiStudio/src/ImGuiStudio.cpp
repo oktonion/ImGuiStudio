@@ -87,7 +87,7 @@ namespace
     std::pair<Widget, bool> CursorWidget;
     std::map<std::string, size_t> WidgetID;
 
-    void DrawCursorWidget(Widget &that)
+    void AddCursorWidget(Widget &that)
     {
         if (CursorWidget.second)
         {
@@ -129,7 +129,7 @@ namespace
 
                 Windows::BeginChild(that.name.c_str(), { that.dim.z, that.dim.w }, true);
 
-                DrawCursorWidget(that);
+                AddCursorWidget(that);
             }
 
             static void end(Widget& that)
@@ -185,7 +185,7 @@ namespace
 
                 Windows::BeginChild(that.name.c_str());
 
-                DrawCursorWidget(that);
+                AddCursorWidget(that);
 
                 if (ImGui::BeginDragDropSource())
                 {
@@ -309,6 +309,73 @@ namespace
         dnd_widget.name = "button" + std::to_string(WidgetID["button"]++);
 
     }
+    void CreateText(Widget& dnd_widget, bool reset = true)
+    {
+        if (reset) dnd_widget = Widget();
+        struct lambdas
+        {
+            static void begin(Widget& that)
+            {
+                using namespace ImGuiStudio::Widgets;
+
+                if (that.dim.x != 0.f || that.dim.y != 0.f)
+                    ImGui::SetCursorPos({ that.dim.x, that.dim.y });
+
+                if(that.dim.z > 0.f) 
+                    ImGui::PushItemWidth(that.dim.z);
+
+                Text::Text(that.name.c_str());
+                
+                if (that.dim.z > 0.f)
+                    ImGui::PopItemWidth();
+
+                if (ImGui::BeginDragDropSource())
+                {
+                    ImGui::SetDragDropPayload("DND_WIDGET", &that, sizeof(that));
+                    ImGui::EndDragDropSource();
+                }
+            }
+
+            static void end(Widget& that)
+            {
+                using namespace ImGuiStudio::Widgets;
+
+            }
+
+            static void begin_prop(Widget& that)
+            {
+                using namespace ImGuiStudio::Widgets;
+
+                Text::BulletText("Test text widget prop");
+            }
+
+            static void end_prop(Widget& that)
+            {
+                using namespace ImGuiStudio::Widgets;
+            }
+
+            static std::string begin_to_string(Widget& that)
+            {
+                return
+                    "ImGui::Text(" + that.name + ");";
+            }
+
+            static std::string end_to_string(Widget& that)
+            {
+                return
+                    "";
+            }
+        };
+        dnd_widget.begin = &lambdas::begin;
+        dnd_widget.end = &lambdas::end;
+        dnd_widget.props.begin = &lambdas::begin_prop;
+        dnd_widget.props.end = &lambdas::end_prop;
+        dnd_widget.begin_to_string = &lambdas::begin_to_string;
+        dnd_widget.end_to_string = &lambdas::end_to_string;
+
+        dnd_widget.name = "text" + std::to_string(WidgetID["text"]++);
+
+    }
 }
 
 void ImGuiStudio::DrawInterface()
@@ -399,9 +466,20 @@ void ImGuiStudio::DrawInterface()
                     CreateChild(dnd_widget);
                     ImGui::SetDragDropPayload("DND_WIDGET", &dnd_widget, sizeof(dnd_widget));
                     ImGui::EndDragDropSource();
+                } ImGui::Separator();
+            }
+            if (ImGui::CollapsingHeader("Text"))
+            {
+                if (Widgets::Main::Button("Simple Text"))
+                {
+                    CreateText(dnd_widget);
                 }
-
-                ImGui::Separator();
+                else if (ImGui::BeginDragDropSource())
+                {
+                    CreateText(dnd_widget);
+                    ImGui::SetDragDropPayload("DND_WIDGET", &dnd_widget, sizeof(dnd_widget));
+                    ImGui::EndDragDropSource();
+                } ImGui::Separator();
             }
             ImGui::EndGroup();
         }
