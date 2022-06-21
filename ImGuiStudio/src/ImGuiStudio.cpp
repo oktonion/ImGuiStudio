@@ -86,6 +86,7 @@ namespace
     std::vector<Widget> TopWindows;
     std::pair<Widget, bool> CursorWidget;
     std::map<std::string, size_t> WidgetID;
+    Widget selected;
 
     void AddCursorWidget(Widget &that)
     {
@@ -128,6 +129,9 @@ namespace
                 using namespace ImGuiStudio::Widgets;
 
                 Windows::BeginChild(that.name.c_str(), { that.dim.z, that.dim.w }, true);
+
+                if (ImGui::IsItemVisible())
+                    selected = that;
 
                 AddCursorWidget(that);
             }
@@ -184,6 +188,9 @@ namespace
                 using namespace ImGuiStudio::Widgets;
 
                 Windows::BeginChild(that.name.c_str());
+
+                if (ImGui::IsItemFocused())
+                    selected = that;
 
                 AddCursorWidget(that);
 
@@ -261,6 +268,9 @@ namespace
                 if (that.dim.x != 0.f || that.dim.y != 0.f)
                     ImGui::SetCursorPos({ that.dim.x, that.dim.y });
                 Main::Button(that.name.c_str(), { that.dim.z, that.dim.w });
+
+                if (ImGui::IsItemFocused())
+                    selected = that;
                 
                 if (ImGui::BeginDragDropSource())
                 {
@@ -325,6 +335,9 @@ namespace
                     ImGui::PushItemWidth(that.dim.z);
 
                 Text::Text(that.name.c_str());
+
+                if (ImGui::IsItemFocused())
+                    selected = that;
                 
                 if (that.dim.z > 0.f)
                     ImGui::PopItemWidth();
@@ -484,52 +497,73 @@ void ImGuiStudio::DrawInterface()
             ImGui::EndGroup();
         }
         
-        ImGui::EndChild();
-    }
+        
+    } ImGui::EndChild();
+
+    
 
     static std::vector<std::size_t> windows_to_remove;
 
     ImGui::SameLine();
-    ImGui::BeginGroup();
-    if (ImGui::BeginTabBar("##tabs", 
-        0
-        | ImGuiTabBarFlags_AutoSelectNewTabs 
-        | ImGuiTabBarFlags_Reorderable 
-        | ImGuiTabBarFlags_FittingPolicyResizeDown))
+    if (ImGui::BeginChild("Tabs"))
     {
-        for (std::size_t i = 0; i < TopWindows.size(); ++i)
+        ImGui::BeginGroup();
+        if (ImGui::BeginTabBar("##tabs",
+            0
+            | ImGuiTabBarFlags_AutoSelectNewTabs
+            | ImGuiTabBarFlags_Reorderable
+            | ImGuiTabBarFlags_FittingPolicyResizeDown))
         {
-            bool opened = true;
-            
-            if (ImGui::BeginTabItem(
-                TopWindows[i].name.c_str(),
-                &opened
-            ))
+            for (std::size_t i = 0; i < TopWindows.size(); ++i)
             {
-                TopWindows[i].draw();
-                if (ImGui::BeginDragDropTarget())
+                bool opened = true;
+
+                if (ImGui::BeginTabItem(
+                    TopWindows[i].name.c_str(),
+                    &opened
+                ))
                 {
-                    ImGuiDragDropFlags target_flags = 0;
-                    //target_flags |= ImGuiDragDropFlags_AcceptBeforeDelivery;    // Don't wait until the delivery (release mouse button on a target) to do something
-                    //target_flags |= ImGuiDragDropFlags_AcceptNoDrawDefaultRect; // Don't display the yellow rectangle
-                    if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DND_WIDGET", target_flags))
+                    TopWindows[i].draw();
+                    if (ImGui::BeginDragDropTarget())
                     {
-                        Widget* ptr = (Widget*)payload->Data;
-                        TopWindows[i].child.push_back(*ptr);
+                        ImGuiDragDropFlags target_flags = 0;
+                        //target_flags |= ImGuiDragDropFlags_AcceptBeforeDelivery;    // Don't wait until the delivery (release mouse button on a target) to do something
+                        //target_flags |= ImGuiDragDropFlags_AcceptNoDrawDefaultRect; // Don't display the yellow rectangle
+                        if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DND_WIDGET", target_flags))
+                        {
+                            Widget* ptr = (Widget*)payload->Data;
+                            TopWindows[i].child.push_back(*ptr);
+                        }
+                        ImGui::EndDragDropTarget();
                     }
-                    ImGui::EndDragDropTarget();
+                    ImGui::EndTabItem();
                 }
-                ImGui::EndTabItem();
+
+                if (!opened)
+                    windows_to_remove.push_back(i);
             }
 
-            if (!opened)
-                windows_to_remove.push_back(i);
+            ImGui::EndTabBar();
         }
 
-        ImGui::EndTabBar();
-    }
+        ImGui::EndGroup();
+    } ImGui::EndChild();
 
-    ImGui::EndGroup();
+    ImGui::SameLine();
+    if (ImGui::Begin("Properties"))
+    {
+        if (selected.props.begin)
+        {
+            ImGui::BeginGroup();
+            if (ImGui::CollapsingHeader("Main"))
+            {
+                selected.props.begin(selected);
+                selected.props.end(selected);
+            }
+            ImGui::EndGroup();
+        }
+
+    } ImGui::End();
 
     for (std::size_t i = 0; i < windows_to_remove.size(); ++i)
     {
