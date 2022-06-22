@@ -245,6 +245,12 @@ namespace
 
                 selected = &that;
 
+                {
+                    ImVec2 pos = ImGui::GetCursorPos();
+                    ImGui::Dummy(ImGui::GetWindowSize());
+                    ImGui::SetCursorPos(pos);
+                }
+
                 if (ImGui::BeginDragDropTarget())
                 {
                     ImGuiDragDropFlags target_flags = 0;
@@ -258,6 +264,7 @@ namespace
                     ImGui::EndDragDropTarget();
                 }
 
+                
                 AddCursorWidget(that);
             }
 
