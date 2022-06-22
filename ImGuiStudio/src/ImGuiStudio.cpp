@@ -4,8 +4,11 @@
 #include <string>
 #include <map>
 
+
 bool ImGuiStudio::Begin(const ImVec2 &size, bool *is_open)
 {
+    ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+
     bool result = Begin(is_open);
 
     ImGui::SetWindowSize({ size.x, size.y });
@@ -34,6 +37,9 @@ struct WidgetBasic
 struct Widget
     : WidgetBasic
 {
+    bool destroy;
+    bool selected;
+
     void (*begin)(Widget&);
     void (*end)(Widget&);
 
@@ -47,21 +53,31 @@ struct Widget
     std::string (*end_to_string)(Widget&);
 
     Widget() :
-        begin(NULL), end(NULL), begin_to_string(NULL), end_to_string(NULL)
+        destroy(false), selected(true)
+        , begin(NULL), end(NULL), begin_to_string(NULL), end_to_string(NULL)
     {
         props.begin = begin;
         props.end = end;
     }
 
     void draw() {
-        begin(*this);
-
+        if (begin)
+            begin(*this);
+       
         for (std::size_t i = 0; i < child.size(); ++i)
         {
+            if (child[i].destroy)
+            {
+                child.erase(child.begin() + i);
+                destroy = false;
+                continue;
+            }
+
             child[i].draw();
         }
 
-        end(*this);
+        if (end)
+            end(*this);
     }
 
     std::string to_string()
@@ -86,38 +102,131 @@ namespace
     std::vector<Widget> TopWindows;
     std::pair<Widget, bool> CursorWidget;
     std::map<std::string, size_t> WidgetID;
-    Widget selected;
+    Widget *selected = NULL;
 
     void AddCursorWidget(Widget &that)
     {
+        
+        ImVec2 rel_mouse_pos = { ImGui::GetMousePos().x - ImGui::GetWindowPos().x, ImGui::GetMousePos().y - ImGui::GetWindowPos().y };
         if (CursorWidget.second)
         {
+            ImGui::SetCursorPos({ rel_mouse_pos.x + 3.f, rel_mouse_pos.y + 3.f });
+            if (!ImGui::IsMouseDragging(ImGuiMouseButton_Left))
+                 CursorWidget.first.draw();
+            if (ImGui::IsMouseDown(ImGuiMouseButton_Right))
+            {
+                CursorWidget.second = false;
+            }
+        }
+
+        if (CursorWidget.second)
+        {
+            static ImVec2 mouse_last_down_pos;
+            static bool mouse_dragging = false;
+
             if (ImGui::IsMouseDragging(ImGuiMouseButton_Left))
             {
+                mouse_dragging = true;
                 CursorWidget.first.dim.z = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left).x;
                 CursorWidget.first.dim.w = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left).y;
 
-                ImGui::SetCursorPos({ CursorWidget.first.dim.x , CursorWidget.first.dim.y });
+                ImGui::SetCursorPos({ mouse_last_down_pos.x , mouse_last_down_pos.y });
                 CursorWidget.first.draw();
             }
             else if (ImGui::IsMouseDown(ImGuiMouseButton_Left))
             {
-                CursorWidget.first.dim.x = ImGui::GetMousePos().x - ImGui::GetCursorScreenPos().x;
-                CursorWidget.first.dim.y = ImGui::GetMousePos().y - ImGui::GetCursorScreenPos().y;
+                mouse_last_down_pos = rel_mouse_pos;
                 CursorWidget.first.dim.z = 0.f;
                 CursorWidget.first.dim.w = 0.f;
             }
             else if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
             {
-                if (CursorWidget.first.dim.x != 0.f || CursorWidget.first.dim.y != 0.f)
+                if (mouse_dragging)
                 {
+                    CursorWidget.first.dim.x = mouse_last_down_pos.x;
+                    CursorWidget.first.dim.y = mouse_last_down_pos.y;
                     that.child.push_back(CursorWidget.first);
                     CursorWidget.second = false;
+                    mouse_dragging = false;
                 }
             }
 
         }
     }
+
+    void AddSelectArea(Widget& that)
+    {
+        ImDrawList* window_draw_list = ImGui::GetWindowDrawList();
+        //ImDrawList* background_draw_list = ImGui::GetBackgroundDrawList();
+
+        static ImVec2 mouse_last_down_pos;
+        static bool mouse_dragging = false;
+        static ImVec2 mouse_last_up_pos;
+
+        static ImVec2 selected_widgets_area[2];
+        static bool selected_widgets_area_show = false;
+
+
+        if (!ImGui::IsItemEdited() && 
+            (mouse_last_down_pos.x < (ImGui::GetWindowPos().x + ImGui::GetWindowSize().x - 20.f)) &&
+            (mouse_last_down_pos.y < (ImGui::GetWindowPos().y + ImGui::GetWindowSize().y - 20.f)) &&
+            ImGui::IsMouseDragging(ImGuiMouseButton_Left)
+            )
+        {
+            ImVec2 delta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left);
+            mouse_last_up_pos.x = delta.x + mouse_last_down_pos.x;
+            mouse_last_up_pos.y = delta.y + mouse_last_down_pos.y;
+            window_draw_list->AddRectFilled(mouse_last_down_pos, mouse_last_up_pos, IM_COL32(255, 255, 255, 70));
+            mouse_dragging = true;
+        }
+        else if (ImGui::IsMouseDown(ImGuiMouseButton_Left))
+        {
+            selected_widgets_area_show = false;
+            mouse_last_down_pos = ImGui::GetMousePos();
+        }
+        else if (mouse_dragging && ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+        {
+            for (std::size_t i = 0; i < that.child.size(); ++i)
+            {
+                bool intersects =
+                    that.child[i].dim.x < mouse_last_up_pos.x - ImGui::GetWindowPos().x &&
+                    that.child[i].dim.y + that.child[i].dim.w > mouse_last_down_pos.x - ImGui::GetWindowPos().x &&
+                    that.child[i].dim.x + that.child[i].dim.z < mouse_last_up_pos.y - ImGui::GetWindowPos().y &&
+                    that.child[i].dim.y > mouse_last_down_pos.y - ImGui::GetWindowPos().y;
+
+
+                that.child[i].selected = intersects;
+                if (intersects)
+                {
+                    selected_widgets_area[0].x = (selected_widgets_area[0].x < that.child[i].dim.x ? selected_widgets_area[0].x : that.child[i].dim.x - 1.f);
+                    selected_widgets_area[0].y = (selected_widgets_area[0].y < that.child[i].dim.y ? selected_widgets_area[0].y : that.child[i].dim.y - 1.f);
+                    selected_widgets_area[1].x = (selected_widgets_area[1].x > that.child[i].dim.z ? selected_widgets_area[1].x : that.child[i].dim.z + 1.f);
+                    selected_widgets_area[1].y = (selected_widgets_area[1].y > that.child[i].dim.w ? selected_widgets_area[1].y : that.child[i].dim.w + 1.f);
+                    selected_widgets_area_show = true;
+                }
+            }
+        }
+
+        if (selected_widgets_area_show)
+        {
+            window_draw_list->AddRect(selected_widgets_area[0], selected_widgets_area[1], IM_COL32(255, 255, 255, 70));
+        }
+    }
+
+    void DrawMainProperties(Widget& that)
+    {
+        ImGui::BeginGroup();
+        float value = that.dim.z;
+        if (ImGui::SliderFloat("width", &value, 0.f, 9999.f)) {
+            that.dim.z = value;
+        }
+        value = that.dim.w;
+        if (ImGui::SliderFloat("height", &value, 0.f, 9999.f)) {
+            that.dim.w = value;
+        }
+        ImGui::EndGroup();
+    }
+
 
     void CreateWindow()
     {
@@ -128,10 +237,26 @@ namespace
             {
                 using namespace ImGuiStudio::Widgets;
 
-                Windows::BeginChild(that.name.c_str(), { that.dim.z, that.dim.w }, true);
 
-                if (ImGui::IsItemVisible())
-                    selected = that;
+                Windows::Begin(that.name.c_str());
+
+                that.dim.z = ImGui::GetWindowWidth();
+                that.dim.w = ImGui::GetWindowHeight();
+
+                selected = &that;
+
+                if (ImGui::BeginDragDropTarget())
+                {
+                    ImGuiDragDropFlags target_flags = 0;
+                    //target_flags |= ImGuiDragDropFlags_AcceptBeforeDelivery;    // Don't wait until the delivery (release mouse button on a target) to do something
+                    //target_flags |= ImGuiDragDropFlags_AcceptNoDrawDefaultRect; // Don't display the yellow rectangle
+                    if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DND_WIDGET", target_flags))
+                    {
+                        Widget* ptr = (Widget*)payload->Data;
+                        that.child.push_back(*ptr);
+                    }
+                    ImGui::EndDragDropTarget();
+                }
 
                 AddCursorWidget(that);
             }
@@ -140,19 +265,30 @@ namespace
             {
                 using namespace ImGuiStudio::Widgets;
 
-                Windows::EndChild();
+                Windows::End();
             }
 
             static void begin_prop(Widget& that)
             {
                 using namespace ImGuiStudio::Widgets;
 
-                Text::BulletText("Test window prop");
+                ImGui::BeginGroup();
+                float value = that.dim.z;
+                if (ImGui::SliderFloat("width", &value, 0.f, 9999.f)) {
+                    that.dim.z = value;
+                }
+                value = that.dim.w;
+                if (ImGui::SliderFloat("height", &value, 0.f, 9999.f)) {
+                    that.dim.w = value;
+                }
+                
             }
 
             static void end_prop(Widget& that)
             {
                 using namespace ImGuiStudio::Widgets;
+
+                ImGui::EndGroup();
             }
 
             static std::string begin_to_string(Widget& that)
@@ -175,6 +311,8 @@ namespace
         top_window.end_to_string = &lambdas::end_to_string;
 
         top_window.name = "form" + std::to_string(TopWindows.size());
+        top_window.dim.z = 420.f;
+        top_window.dim.w = 380.f;
 
         TopWindows.push_back(top_window);
     }
@@ -189,10 +327,8 @@ namespace
 
                 Windows::BeginChild(that.name.c_str());
 
-                if (ImGui::IsItemFocused())
-                    selected = that;
-
-                AddCursorWidget(that);
+                if (ImGui::IsItemFocused() || ImGui::IsItemClicked())
+                    selected = &that;
 
                 if (ImGui::BeginDragDropSource())
                 {
@@ -213,6 +349,8 @@ namespace
                     }
                     ImGui::EndDragDropTarget();
                 }
+
+                AddCursorWidget(that);
             }
 
             static void end(Widget& that)
@@ -226,7 +364,7 @@ namespace
             {
                 using namespace ImGuiStudio::Widgets;
 
-                Text::BulletText("Test child window prop");
+                DrawMainProperties(that);
             }
 
             static void end_prop(Widget& that)
@@ -253,6 +391,8 @@ namespace
         dnd_widget.begin_to_string = &lambdas::begin_to_string;
         dnd_widget.end_to_string = &lambdas::end_to_string;
 
+        dnd_widget.dim.z = 420.f;
+        dnd_widget.dim.w = 380.f;
         dnd_widget.name = "child form" + std::to_string(WidgetID["child form"]++);
 
     }
@@ -270,7 +410,7 @@ namespace
                 Main::Button(that.name.c_str(), { that.dim.z, that.dim.w });
 
                 if (ImGui::IsItemFocused())
-                    selected = that;
+                    selected = &that;
                 
                 if (ImGui::BeginDragDropSource())
                 {
@@ -289,7 +429,7 @@ namespace
             {
                 using namespace ImGuiStudio::Widgets;
 
-                Text::BulletText("Test child window prop");
+                DrawMainProperties(that);
             }
 
             static void end_prop(Widget& that)
@@ -337,7 +477,7 @@ namespace
                 Text::Text(that.name.c_str());
 
                 if (ImGui::IsItemFocused() || ImGui::IsItemClicked())
-                    selected = that;
+                    selected = &that;
                 
                 if (that.dim.z > 0.f)
                     ImGui::PopItemWidth();
@@ -359,7 +499,7 @@ namespace
             {
                 using namespace ImGuiStudio::Widgets;
 
-                Text::BulletText("Test text widget prop");
+                DrawMainProperties(that);
             }
 
             static void end_prop(Widget& that)
@@ -505,71 +645,46 @@ void ImGuiStudio::DrawInterface()
     static std::vector<std::size_t> windows_to_remove;
 
     ImGui::SameLine();
-    if (ImGui::BeginChild("Tabs"))
+    for (std::size_t i = 0; i < TopWindows.size(); ++i)
     {
-        ImGui::BeginGroup();
-        if (ImGui::BeginTabBar("##tabs",
-            0
-            | ImGuiTabBarFlags_AutoSelectNewTabs
-            | ImGuiTabBarFlags_Reorderable
-            | ImGuiTabBarFlags_FittingPolicyResizeDown))
+        auto begin = TopWindows[i].begin;
+        TopWindows[i].begin = NULL;
+        begin(TopWindows[i]);
+        
+        if (!CursorWidget.second) AddSelectArea(TopWindows[i]);
+        TopWindows[i].draw();
+
+        TopWindows[i].begin = begin;
+
+        if (TopWindows[i].destroy)
         {
-            for (std::size_t i = 0; i < TopWindows.size(); ++i)
-            {
-                bool opened = true;
-
-                if (ImGui::BeginTabItem(
-                    TopWindows[i].name.c_str(),
-                    &opened
-                ))
-                {
-                    TopWindows[i].draw();
-                    if (ImGui::BeginDragDropTarget())
-                    {
-                        ImGuiDragDropFlags target_flags = 0;
-                        //target_flags |= ImGuiDragDropFlags_AcceptBeforeDelivery;    // Don't wait until the delivery (release mouse button on a target) to do something
-                        //target_flags |= ImGuiDragDropFlags_AcceptNoDrawDefaultRect; // Don't display the yellow rectangle
-                        if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DND_WIDGET", target_flags))
-                        {
-                            Widget* ptr = (Widget*)payload->Data;
-                            TopWindows[i].child.push_back(*ptr);
-                        }
-                        ImGui::EndDragDropTarget();
-                    }
-                    ImGui::EndTabItem();
-                }
-
-                if (!opened)
-                    windows_to_remove.push_back(i);
-            }
-
-            ImGui::EndTabBar();
+            TopWindows[i].destroy = false;
+            windows_to_remove.push_back(i);
         }
+    }
 
-        ImGui::EndGroup();
-    } ImGui::EndChild();
-
-    ImGui::SameLine();
-    if (ImGui::Begin("Properties", NULL, 
-        0
-        | ImGuiWindowFlags_AlwaysAutoResize
-        | ImGuiWindowFlags_NoResize
-    ))
+    if (selected)
     {
-        ImGui::Dummy({ 200.f, 10.f });
-        if (selected.props.begin)
+        ImGui::SameLine();
+        if (ImGui::Begin("Properties", NULL,
+            0
+            | ImGuiWindowFlags_AlwaysAutoResize
+            | ImGuiWindowFlags_NoResize
+        ))
         {
+            ImGui::Text(selected->name.c_str());
+            ImGui::Dummy({ 200.f, 10.f });
             ImGui::BeginGroup();
-            if (ImGui::CollapsingHeader("Main"))
+            if (ImGui::CollapsingHeader("Main", ImGuiTreeNodeFlags_DefaultOpen))
             {
-                selected.props.begin(selected);
-                selected.props.end(selected);
+                selected->props.begin(*selected);
+                selected->props.end(*selected);
             }
             ImGui::EndGroup();
-        }
-        
 
-    } ImGui::End();
+
+        } ImGui::End();
+    }
 
     for (std::size_t i = 0; i < windows_to_remove.size(); ++i)
     {
