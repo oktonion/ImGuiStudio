@@ -21,6 +21,18 @@ namespace ImGui
 }
 
 
+namespace ImGui
+{
+    void DrawBorder(ImVec2 obj_pos, ImVec2 obj_size, float distance_thickness = 5.f, ImU32 col = IM_COL32(255, 255, 0, 255))
+    {
+        ImVec2 vMin = { ImGui::GetWindowPos().x + obj_pos.x - distance_thickness, ImGui::GetWindowPos().y + obj_pos.y - distance_thickness };
+        ImVec2 vMax = { vMin.x + obj_size.x + (distance_thickness * 2.f), vMin.y + obj_size.y + (distance_thickness * 2.f) };
+        //ImGui::GetForegroundDrawList( )->AddRect( vMin, vMax, col ); //will draw on top of everything 
+        ImGui::GetWindowDrawList()->AddRect(vMin, vMax, col, 0.f, 0, 0.01f);
+    }
+}
+
+
 
 bool ImGuiStudio::Begin(const ImVec2 &size, bool *is_open)
 {
@@ -45,6 +57,7 @@ bool ImGuiStudio::Begin(bool *is_open)
     );
 }
 
+/*
 /*
 struct WidgetBasic
 {
@@ -750,6 +763,7 @@ void ImGuiStudio::DrawInterface()
         }
     }
 }
+*/
 */
 
 void ImGuiStudio::End()
