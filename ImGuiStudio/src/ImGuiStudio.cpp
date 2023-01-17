@@ -71,22 +71,7 @@ bool ImGuiStudio::Begin(const ImVec2 &size, bool *is_open)
     return result;
 }
 
-bool ImGuiStudio::Begin(bool *is_open)
-{
-    bool result = ImGui::Begin("Dear ImGui Studio", is_open,
-        0
-        |ImGuiWindowFlags_NoBringToFrontOnFocus
-        | ImGuiWindowFlags_MenuBar
-        //| ImGuiWindowFlags_NoResize
-        //| ImGuiWindowFlags_NoMove
-        | ImGuiWindowFlags_NoCollapse
-    );
 
-    ImGuiStudio::Designer::Begin();
-    ImGuiStudio::Properties::Begin();
-
-    return result;
-}
 
 /*
 struct WidgetBasic
@@ -795,13 +780,7 @@ void ImGuiStudio::DrawInterface()
 }
 */
 
-void ImGuiStudio::End()
-{
-    ImGuiStudio::Designer::End();
-    ImGuiStudio::Properties::End();
 
-    ImGui::End();
-}
 
 ImGuiStudio::UI::Designer& ImGuiStudio::Designer()
 {
@@ -1404,4 +1383,32 @@ void ImGuiStudio::Init()
     Properties::Init();
 }
 
+bool ImGuiStudio::Begin(bool* is_open)
+{
+    bool result = ImGui::Begin("Dear ImGui Studio", is_open,
+        0
+        | ImGuiWindowFlags_NoBringToFrontOnFocus
+        | ImGuiWindowFlags_MenuBar
+        //| ImGuiWindowFlags_NoResize
+        //| ImGuiWindowFlags_NoMove
+        | ImGuiWindowFlags_NoCollapse
+    );
+
+    MainWindow().Begin();
+
+    ImGuiStudio::Designer::Begin();
+    ImGuiStudio::Properties::Begin();
+
+    return result;
+}
+
+void ImGuiStudio::End()
+{
+    ImGuiStudio::Designer::End();
+    ImGuiStudio::Properties::End();
+
+    MainWindow().End();
+
+    ImGui::End();
+}
 
