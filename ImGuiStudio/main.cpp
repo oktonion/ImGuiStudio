@@ -318,8 +318,7 @@ namespace ImGuiStudioBackend
     void Start()
     {
         ImVec4 clear_color = ImVec4(0.0f, 0.0f, 0.0f, .0f);
-        ImGuiStudio::Designer::Init();
-        ImGuiStudio::Properties::Init();
+        ImGuiStudio::Init();
 
         {
             struct ButtonInfo :
@@ -391,9 +390,9 @@ namespace ImGuiStudioBackend
                 }
             };
 
-            ImGuiStudio::Designer::Instance().toolbox().add(*new ButtonInfo());
-            ImGuiStudio::Designer::Instance().toolbox().add(*new SmallButtonInfo());
-            ImGuiStudio::Designer::Instance().toolbox().add(*new CheckboxInfo());
+            ImGuiStudio::Designer().toolbox().add(*new ButtonInfo());
+            ImGuiStudio::Designer().toolbox().add(*new SmallButtonInfo());
+            ImGuiStudio::Designer().toolbox().add(*new CheckboxInfo());
         }
         bool opened = true;
         int display_w = 0, display_h = 0;
@@ -425,10 +424,7 @@ namespace ImGuiStudioBackend
 
             
 
-            //ImGuiStudio::Begin(&opened);
-            ImGuiStudio::MainWindow::Begin();
-            ImGuiStudio::Designer::Begin();
-            ImGuiStudio::Properties::Begin();
+            ImGuiStudio::Begin(&opened);
             
             auto winSize = ImGui::GetWindowSize();
             auto winPos = ImGui::GetWindowPos();
@@ -447,16 +443,12 @@ namespace ImGuiStudioBackend
                 ImGui::SetWindowPos(ImVec2(imgui_main_window_border_x, imgui_main_window_border_y));
             }
 
-            opened = ImGuiStudio::MainWindow::Opened();
-
             if (!opened)
                 return;
 
-            ImGuiStudio::Designer::Step();
+            ImGuiStudio::Designer().step();
             
-            ImGuiStudio::Properties::End();
-            ImGuiStudio::Designer::End();
-            ImGuiStudio::MainWindow::End();
+            ImGuiStudio::End();
 
             ImGui::Render();
 

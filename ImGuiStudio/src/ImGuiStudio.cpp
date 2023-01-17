@@ -2,8 +2,10 @@
 
 #include <ImGui/misc/cpp/imgui_stdlib.h>
 
+#include "Designer.h"
+#include "Properties.h"
 
-#include <GenericGuiStudio/include/Widgets.h>
+#include <GenericGuiStudio/include/GIDE.h>
 
 #include <vector>
 #include <string>
@@ -20,6 +22,42 @@ namespace ImGui
     }
 }
 
+namespace ImGuiStudio
+{
+    namespace Widgets
+    {
+        typedef UI::Widgets Widgets;
+
+        struct IBasic;
+        template<class T = Widgets::Basic>
+        struct Basic;
+
+        struct MainWindow;
+        struct Window;
+        struct SubWindow;
+        struct Collapsible;
+        struct Button;
+
+        template<class ValueT>
+        struct Edit;
+    }
+
+    static Widgets::Window& CreateWindow(Widgets::Window& parent);
+
+    static Widgets::Collapsible& CreateCollapsible(Widgets::Window& parent);
+
+    static Widgets::Button& CreateButton(Widgets::Window& parent);
+
+    template<class ValueT>
+    static Widgets::Edit<ValueT>& CreateEdit(Widgets::Window& parent);
+
+    static Widgets::SubWindow& CreateSubWindow(Widgets::Window& parent);
+
+    static Widgets::MainWindow& MainWindow();
+}
+
+
+
 
 
 bool ImGuiStudio::Begin(const ImVec2 &size, bool *is_open)
@@ -35,7 +73,7 @@ bool ImGuiStudio::Begin(const ImVec2 &size, bool *is_open)
 
 bool ImGuiStudio::Begin(bool *is_open)
 {
-    return ImGui::Begin("Dear ImGui Studio", is_open,
+    bool result = ImGui::Begin("Dear ImGui Studio", is_open,
         0
         |ImGuiWindowFlags_NoBringToFrontOnFocus
         | ImGuiWindowFlags_MenuBar
@@ -43,6 +81,11 @@ bool ImGuiStudio::Begin(bool *is_open)
         //| ImGuiWindowFlags_NoMove
         | ImGuiWindowFlags_NoCollapse
     );
+
+    ImGuiStudio::Designer::Begin();
+    ImGuiStudio::Properties::Begin();
+
+    return result;
 }
 
 /*
@@ -754,779 +797,600 @@ void ImGuiStudio::DrawInterface()
 
 void ImGuiStudio::End()
 {
+    ImGuiStudio::Designer::End();
+    ImGuiStudio::Properties::End();
+
     ImGui::End();
 }
 
-struct MainWindow;
-
-struct ImGuiStudio::Designer::impl
+ImGuiStudio::UI::Designer& ImGuiStudio::Designer()
 {
-    struct IBasic;
-    template<class T = Widgets::Basic>
-    struct Basic;
-    
-    struct Window;
-    struct SubWindow;
-    struct Collapsible;
-    struct Button;
-
-    template<class ValueT>
-    struct Edit;
-
-    impl();
-
-    Window& CreateWindow();
-    SubWindow& CreateSubWindow(Window&);
-    Collapsible& CreateCollapsible();
-    Button& CreateButton();
-    template<class ValueT>
-    Edit<ValueT>& CreateEdit();
-
-    ::MainWindow &top_window;
-    typedef std::map<std::size_t, Window> windows_containter;
-    windows_containter windows;
-    std::map<std::size_t, Collapsible> collapsibles;
-    std::map<std::size_t, Button> buttons;
-    std::map<std::size_t, SubWindow> subwindows;
-
-    ImGuiStudio::Designer::impl::IBasic* active_widget;
-    ImGuiStudio::Designer::Form::Component* active_component;
-};
+    return ImGuiStudio::Designer::Instance();
+}
 
 
 
-struct ImGuiStudio::Designer::impl::IBasic
+namespace ImGuiStudio
 {
-    static std::map<std::string, float>& EditFloatValues()
+    namespace Widgets
     {
-        static std::map<std::string, float> values;
-        return values;
-    }
-
-    static void EditFloatChanged(Widgets::IEditFloat& fedit, const Widgets::IEditFloat::ValueType &val)
-    {
-        EditFloatValues()[fedit.caption()] = val;
-    }
-
-    static std::map<std::string, int>& EditIntValues()
-    {
-        static std::map<std::string, int> values;
-        return values;
-    }
-
-    static void EditIntChanged(Widgets::IEditInt& iedit, const Widgets::IEditInt::ValueType& val)
-    {
-        EditIntValues()[iedit.caption()] = val;
-    }
-
-    std::size_t id;
-
-    typedef IBasic Child;
-    typedef Widgets::IBasic::Parent Parent;
-
-    virtual void AddChild(Child& value, std::size_t tab_order = 0) = 0;
-
-    virtual void RemoveChild(Child& value) = 0;
-
-    virtual void Begin() = 0;
-
-    virtual void End() = 0;
-
-    typedef ImGuiStudio::Properties::IProperty IProperty;
-    std::vector<IProperty*> properties;
-
-};
-
-template<GIDE::Properties::Type T>
-struct PropertyEdit;
-
-
-template<class BaseT>
-struct ImGuiStudio::Designer::impl::Basic
-    : BaseT
-    , IBasic
-{
-
-    typedef impl::IBasic::Child Child;
-    typedef typename BaseT::Parent Parent;
-
-
-    Basic()
-    {
-        struct FloatingPointProperty
-            : ImGuiStudio::Properties::Property<GIDE::Properties::FloatingPoint>
+        struct IBasic
         {
-            typedef ImGuiStudio::Properties::Property<GIDE::Properties::FloatingPoint> Base;
-            std::string prop_name;
-            using typename Base::ValueType;
-            ValueType prop_value;
-            FloatingPointProperty(std::string name_) 
-                : prop_name(name_) {
+            static std::map<std::string, float>& EditFloatValues()
+            {
+                static std::map<std::string, float> values;
+                return values;
             }
 
+            static void EditFloatChanged(Widgets::IEdit<float>& fedit, const Widgets::IEdit<float>::ValueType& val)
+            {
+                EditFloatValues()[fedit.caption()] = val;
+            }
+
+            static std::map<std::string, int>& EditIntValues()
+            {
+                static std::map<std::string, int> values;
+                return values;
+            }
+
+            static void EditIntChanged(Widgets::IEdit<int>& iedit, const Widgets::IEdit<int>::ValueType& val)
+            {
+                EditIntValues()[iedit.caption()] = val;
+            }
+
+            std::size_t id;
+
+            typedef IBasic Child;
+            typedef Widgets::IBasic::Parent Parent;
+
+            virtual void AddChild(Child& value, std::size_t tab_order = 0) = 0;
+
+            virtual void RemoveChild(Child& value) = 0;
+
+            virtual void Begin() = 0;
+
+            virtual void End() = 0;
+
+            typedef ImGuiStudio::Properties::IProperty IProperty;
+            std::vector<IProperty*> properties;
+
+        };
+
+        template<GIDE::Properties::Type T>
+        struct PropertyEdit;
+
+        template<class BaseT>
+        struct Basic
+            : BaseT
+            , IBasic
+        {
+
+            typedef IBasic::Child Child;
+            typedef typename BaseT::Parent Parent;
+
+
+            Basic()
+            {
+                id = 0;
+                struct FloatingPointProperty
+                    : ImGuiStudio::Properties::Property<GIDE::Properties::FloatingPoint>
+                {
+                    typedef ImGuiStudio::Properties::Property<GIDE::Properties::FloatingPoint> Base;
+                    std::string prop_name;
+                    using typename Base::ValueType;
+                    ValueType prop_value;
+                    FloatingPointProperty(std::string name_)
+                        : prop_name(name_) {
+                    }
+
+                    virtual ValueType value() const {
+                        return prop_value;
+                    }
+
+                    virtual void value(const ValueType& val) {
+                        prop_value = val;
+                    }
+
+                    virtual std::string name() const {
+                        return prop_name;
+                    }
+
+                    virtual Widget& widget() const
+                    {
+                        static PropertyEdit<GIDE::Properties::FloatingPoint> edit;
+                        return edit;
+                    }
+                };
+                properties.push_back(new FloatingPointProperty("test"));
+                properties.push_back(new FloatingPointProperty("test1"));
+                properties.push_back(new FloatingPointProperty("test2"));
+            }
+
+            virtual void AddChild(Child& value, std::size_t tab_order = 0)
+            {
+                if (&value == this)
+                    throw("");
+                Child* widget = dynamic_cast<Child*>(parent());
+                if (widget) widget->AddChild(value, tab_order);
+            }
+
+            virtual void RemoveChild(Child& value)
+            {
+                if (&value == this)
+                    throw("");
+                Child* widget = dynamic_cast<Child*>(parent());
+                if (widget) widget->RemoveChild(value);
+            }
+
+            virtual void Begin()
+            {
+
+            }
+
+            virtual void End()
+            {
+
+            }
+
+            virtual void parent(Parent& value)
+            {
+                // remove from old parent
+                {
+                    IBasic* widget = dynamic_cast<IBasic*>(parent());
+                    if (widget)
+                        widget->RemoveChild(*this);
+                }
+
+                // add to new parent
+                {
+                    IBasic* widget = dynamic_cast<IBasic*>(&value);
+                    widget->AddChild(*this);
+                    BaseT::parent(value);
+                }
+            }
+
+
+
+            using BaseT::parent;
+        };
+
+        struct Button
+            : Basic< Widgets::Button>
+        {
+            virtual void Begin()
+            {
+                auto pos = ImGui::GetCursorPos();
+                auto pos_w = position();
+                ImGui::SetCursorPosX(x()); ImGui::SetCursorPosY(y());
+                position(pos.x, pos.y);
+
+                auto label = caption(); if (label.empty()) label = name();
+                bool is_pressed = ImGui::Button(label.c_str());
+
+                select(ImGui::IsItemActive());
+
+                if (is_pressed)
+                {
+                    press();
+                }
+                else
+                {
+                    release();
+                }
+
+                if (is_pressed)
+                    click();
+
+                size(ImGui::GetItemRectSize().x, ImGui::GetItemRectSize().y);
+
+                if (selected())
+                    ImGui::DrawBorder({ pos_w.x, pos_w.y }, { width(), height() });
+            }
+
+            virtual void End()
+            {
+
+            }
+        };
+
+        template<>
+        struct Edit<float>
+            : Basic < Widgets::Edit<float> /**/>
+        {
+            Edit()
+            {
+                set_on_value_changed_callback(IBasic::EditFloatChanged);
+            }
+
+            virtual void Begin()
+            {
+                auto label = caption(); if (label.empty()) label = name();
+                float fvalue = value();
+                bool value_changed = ImGui::DragFloat(label.c_str(), &fvalue);
+                select(ImGui::IsItemActive());
+                if (value_changed)
+                {
+                    value(fvalue);
+                }
+            }
+
+            virtual void End()
+            {
+
+            }
+        };
+
+        template<>
+        struct Edit<int>
+            : Basic < Widgets::Edit<int> /**/>
+        {
+            virtual void Begin()
+            {
+                auto label = caption(); if (label.empty()) label = name();
+                int ivalue = value();
+                if (ImGui::DragInt(label.c_str(), &ivalue))
+                {
+                    value(ivalue);
+                }
+
+                select(ImGui::IsItemActive());
+            }
+
+            virtual void End()
+            {
+
+            }
+        };
+
+        template<>
+        struct Edit<std::string>
+            : Basic < Widgets::Edit<std::string> /**/>
+        {
+            virtual void Begin()
+            {
+                std::string svalue = value();
+                if (ImGui::InputText(name().c_str(), &svalue))
+                    value(svalue);
+
+                select(ImGui::IsItemActive());
+            }
+
+            virtual void End()
+            {
+
+            }
+        };
+
+        struct Window
+            : Basic <Widgets::Window>
+        {
+            std::vector<Child*> children;
+
+            void AddChild(Child& value, std::size_t tab_order = 0)
+            {
+                if (&value == this)
+                    throw("");
+                children.push_back(&value);
+            }
+
+            void RemoveChild(Child& value)
+            {
+                for (std::size_t i = 0; i < children.size(); ++i)
+                {
+                    if (children[i]->id == value.id)
+                        children.erase(children.begin() + i);
+                }
+            }
+
+            void Begin()
+            {
+                if (hidden())
+                    return;
+
+                bool is_opened = true;
+
+
+                ImGui::Begin(name().c_str(), &is_opened,
+                    0
+                    //| ImGuiWindowFlags_NoBringToFrontOnFocus
+                    | ImGuiWindowFlags_MenuBar
+                    //| ImGuiWindowFlags_NoResize
+                    //| ImGuiWindowFlags_NoMove
+                    | ImGuiWindowFlags_NoCollapse
+                );
+
+                select(ImGui::IsItemActive());
+
+                if (!is_opened) { End(); hide(); return; }
+
+                for (std::size_t i = 0; i < children.size(); ++i)
+                {
+                    children[i]->Begin();
+                    children[i]->End();
+                }
+            }
+
+            void End()
+            {
+                if (hidden()) return;
+
+                ImGui::End();
+            }
+        };
+
+        struct SubWindow
+            : Basic <Widgets::SubWindow>
+        {
+            std::vector<Child*> children;
+
+            void AddChild(Child& value, std::size_t tab_order = 0)
+            {
+                if (&value == this)
+                    throw("");
+                children.push_back(&value);
+            }
+
+            void RemoveChild(Child& value)
+            {
+                for (std::size_t i = 0; i < children.size(); ++i)
+                {
+                    if (children[i]->id == value.id)
+                        children.erase(children.begin() + i);
+                }
+            }
+
+            void Begin()
+            {
+                if (hidden())
+                    return;
+
+                bool is_opened = ImGui::BeginChild(("##form_" + name()).c_str(), { -1, -1 }, true,
+                    0
+                    | ImGuiWindowFlags_NoBringToFrontOnFocus
+                    | ImGuiWindowFlags_MenuBar
+                    //| ImGuiWindowFlags_NoResize
+                    //| ImGuiWindowFlags_NoMove
+                    | ImGuiWindowFlags_NoCollapse);
+
+                select(ImGui::IsItemActive());
+
+                if (!is_opened) { ImGui::EndChild(); hide(); return; }
+
+                for (std::size_t i = 0; i < children.size(); ++i)
+                {
+                    children[i]->Begin();
+                    children[i]->End();
+                }
+            }
+
+            void End()
+            {
+                if (hidden()) return;
+
+                ImGui::EndChild();
+            }
+        };
+
+        struct MainWindow
+            : Window
+        {
+            bool hidden = false;
+
+            void Begin()
+            {
+                if (hidden)
+                    return;
+
+                bool is_opened = true;
+
+
+                ImGui::Begin("Dear ImGui Studio", &is_opened,
+                    0
+                    | ImGuiWindowFlags_NoBringToFrontOnFocus
+                    | ImGuiWindowFlags_MenuBar
+                    //| ImGuiWindowFlags_NoResize
+                    //| ImGuiWindowFlags_NoMove
+                    | ImGuiWindowFlags_NoCollapse
+                );
+
+
+                if (!is_opened) { End(); hidden = true; return; }
+
+                for (std::size_t i = 0; i < children.size(); ++i)
+                {
+                    children[i]->Begin();
+                    children[i]->End();
+                }
+            }
+
+            void End()
+            {
+                if (hidden) return;
+
+                ImGui::End();
+            }
+        };
+
+        struct IPropertyEdit
+        {
+            std::vector<ImGuiStudio::Properties::IProperty*> props;
+        };
+
+        template<GIDE::Properties::Type T>
+        struct PropertyEdit
+            : Edit<typename ImGuiStudio::Properties::Property<T>::ValueType >
+            , IPropertyEdit
+        {
+            typedef ImGuiStudio::Properties::Property<T> Properties;
+            typedef typename Properties::ValueType ValueType;
+
             virtual ValueType value() const {
-                return prop_value;
+                ValueType result = ValueType();
+                for (auto& prop : props)
+                    if (prop->value<T>() != result) result = prop->value<T>();
+                return result;
             }
 
             virtual void value(const ValueType& val) {
-                prop_value = val;
-            }
-
-            virtual std::string name() const {
-                return prop_name;
-            }
-
-            virtual Widget& widget() const 
-            {
-                static PropertyEdit<GIDE::Properties::FloatingPoint> edit;
-                return edit;
+                for (auto& prop : props)
+                    prop->value<T>(val);
             }
         };
-        properties.push_back(new FloatingPointProperty("test"));
-        properties.push_back(new FloatingPointProperty("test1"));
-        properties.push_back(new FloatingPointProperty("test2"));
-    }
 
-    virtual void AddChild(Child& value, std::size_t tab_order = 0)
-    {
-        if (&value == this)
-            throw("");
-        Child* widget = dynamic_cast<Child*>(parent());
-        if (widget) widget->AddChild(value, tab_order);
-    }
 
-    virtual void RemoveChild(Child& value)
-    {
-        if (&value == this)
-            throw("");
-        Child* widget = dynamic_cast<Child*>(parent());
-        if (widget) widget->RemoveChild(value);
-    }
 
-    virtual void Begin()
-    {
 
-    }
-
-    virtual void End()
-    {
-
-    }
-
-    virtual void parent(Parent& value)
-    {
-        // remove from old parent
+        struct Collapsible
+            : Basic<Widgets::Collapsible>
         {
-            impl::IBasic* widget = dynamic_cast<impl::IBasic*>(parent());
-            if (widget)
-                widget->RemoveChild(*this);
-        }
 
-        // add to new parent
-        {
-            impl::IBasic* widget = dynamic_cast<impl::IBasic*>(&value);
-            widget->AddChild(*this);
-            BaseT::parent(value);
-        }
+            std::vector<Child*> children;
+
+            void AddChild(Child& value, std::size_t tab_order = 0)
+            {
+                if (&value == this)
+                    throw("");
+
+                children.push_back(&value);
+            }
+
+            void RemoveChild(Child& value)
+            {
+                for (std::size_t i = 0; i < children.size(); ++i)
+                {
+                    if (children[i]->id == value.id)
+                        children.erase(children.begin() + i);
+                }
+            }
+
+            void Begin()
+            {
+
+
+                ImGui::BeginGroup();
+
+                bool is_collapsed =
+                    !ImGui::CollapsingHeader(name().c_str(), ImGuiTreeNodeFlags_DefaultOpen);
+
+                select(ImGui::IsItemActive());
+
+                if (is_collapsed != collapsed())
+                {
+                    collapse(is_collapsed);
+                }
+
+                if (!is_collapsed)
+                {
+                    for (std::size_t i = 0; i < children.size(); ++i)
+                    {
+                        children[i]->Begin();
+                        children[i]->End();
+                    }
+                }
+                ImGui::EndGroup();
+
+            }
+
+
+        };
     }
+}
 
 
-
-    using BaseT::parent;
-};
-
-
-
-struct ImGuiStudio::Designer::impl::Button
-    : impl::Basic< Widgets::Button>
+namespace ImGuiStudio
 {
-    virtual void Begin()
+    static std::size_t widget_id()
     {
-        auto pos = ImGui::GetCursorPos();
-        auto pos_w = position();
-        ImGui::SetCursorPosX(x()); ImGui::SetCursorPosY(y());
-        position(pos.x, pos.y);
-
-        auto label = caption(); if (label.empty()) label = name();
-        bool is_pressed = ImGui::Button(label.c_str());
-
-        if (ImGui::IsItemActive()) 
-            ImGuiStudio::Designer::Instance().internal->active_widget = this;
-        
-        if (is_pressed)
-        {
-            press();
-        }
-        else
-        {
-            release();
-        }
-
-        if(is_pressed)
-            click();
-        
-        size(ImGui::GetItemRectSize().x, ImGui::GetItemRectSize().y);
-
-        if(selected())
-            ImGui::DrawBorder({ pos_w.x, pos_w.y }, { width(), height() });
+        static std::size_t result = 0;
+        return ++result;
     }
 
-    virtual void End()
+    static Widgets::Window& CreateWindow(Widgets::Window& parent)
     {
-
-    }
-};
-
-template<>
-struct ImGuiStudio::Designer::impl::Edit<float>
-    : impl::Basic < Widgets::Edit<float> /**/>
-{
-    Edit()
-    {
-        set_on_value_changed_callback(impl::IBasic::EditFloatChanged);
-    }
-
-    virtual void Begin()
-    {
-        auto label = caption(); if (label.empty()) label = name();
-        float fvalue = value();
-        bool value_changed = ImGui::DragFloat(label.c_str(), &fvalue);
-        if (ImGui::IsItemActive())
-            ImGuiStudio::Designer::Instance().internal->active_widget = this;
-        if (value_changed)
-        {
-            value(fvalue);
-        }
-    }
-
-    virtual void End()
-    {
-
-    }
-};
-
-template<>
-struct ImGuiStudio::Designer::impl::Edit<int>
-    : impl::Basic < Widgets::Edit<int> /**/>
-{
-    virtual void Begin()
-    {
-        auto label = caption(); if (label.empty()) label = name();
-        int ivalue = value();
-        if (ImGui::DragInt(label.c_str(), &ivalue))
-        {
-            value(ivalue);
-        }
-
-        if (ImGui::IsItemActive())
-            ImGuiStudio::Designer::Instance().internal->active_widget = this;
-    }
-
-    virtual void End()
-    {
-
-    }
-};
-
-template<>
-struct ImGuiStudio::Designer::impl::Edit<std::string>
-    : impl::Basic < Widgets::Edit<std::string> /**/>
-{
-    virtual void Begin()
-    {
-        std::string svalue = value();
-        if (ImGui::InputText(name().c_str(), &svalue))
-            value(svalue);
-
-        if (ImGui::IsItemActive())
-            ImGuiStudio::Designer::Instance().internal->active_widget = this;
-    }
-
-    virtual void End()
-    {
-
-    }
-};
-
-struct ImGuiStudio::Designer::impl::Window
-    : Basic <Widgets::Window>
-{
-    std::vector<Child*> children;
-
-    void AddChild(Child& value, std::size_t tab_order = 0)
-    {
-        if (&value == this)
-            throw("");
-        children.push_back(&value);
-    }
-
-    void RemoveChild(Child& value)
-    {
-        for (std::size_t i = 0; i < children.size(); ++i)
-        {
-            if (children[i]->id == value.id)
-                children.erase(children.begin() + i);
-        }
-    }
-
-    void Begin()
-    {
-        if (hidden())
-            return;
-
-        bool is_opened = true;
-
-
-        ImGui::Begin(name().c_str(), &is_opened,
-            0
-            //| ImGuiWindowFlags_NoBringToFrontOnFocus
-            | ImGuiWindowFlags_MenuBar
-            //| ImGuiWindowFlags_NoResize
-            //| ImGuiWindowFlags_NoMove
-            | ImGuiWindowFlags_NoCollapse
-        );
-
-        if (ImGui::IsItemActive())
-            ImGuiStudio::Designer::Instance().internal->active_widget = this;
-
-        if (!is_opened) { End(); hide(); return; }
-
-        for (std::size_t i = 0; i < children.size(); ++i)
-        {
-            children[i]->Begin();
-            children[i]->End();
-        }
-    }
-
-    void End()
-    {
-        if (hidden()) return;
-
-        ImGui::End();
-    }
-};
-
-struct ImGuiStudio::Designer::impl::SubWindow
-    : Basic <Widgets::SubWindow>
-{
-    std::vector<Child*> children;
-
-    void AddChild(Child& value, std::size_t tab_order = 0)
-    {
-        if (&value == this)
-            throw("");
-        children.push_back(&value);
-    }
-
-    void RemoveChild(Child& value)
-    {
-        for (std::size_t i = 0; i < children.size(); ++i)
-        {
-            if (children[i]->id == value.id)
-                children.erase(children.begin() + i);
-        }
-    }
-
-    void Begin()
-    {
-        if (hidden())
-            return;
-        
-        bool is_opened = ImGui::BeginChild(("##form_" + name()).c_str(), {-1, -1}, true,
-            0
-            | ImGuiWindowFlags_NoBringToFrontOnFocus
-            | ImGuiWindowFlags_MenuBar
-            //| ImGuiWindowFlags_NoResize
-            //| ImGuiWindowFlags_NoMove
-            | ImGuiWindowFlags_NoCollapse);
-
-        if (ImGui::IsItemActive())
-            ImGuiStudio::Designer::Instance().internal->active_widget = this;
-
-        if (!is_opened) { ImGui::EndChild(); hide(); return; }
-
-        for (std::size_t i = 0; i < children.size(); ++i)
-        {
-            children[i]->Begin();
-            children[i]->End();
-        }
-    }
-
-    void End()
-    {
-        if (hidden()) return;
-
-        ImGui::EndChild();
-    }
-};
-
-struct MainWindow
-    : ImGuiStudio::Designer::impl::Window
-{
-    MainWindow()
-    {
-        name("Dear ImGui Studio");
-    }
-    void Begin()
-    {
-        if (hidden())
-            return;
-
-        bool is_opened = true;
-
-
-        ImGui::Begin(name().c_str(), &is_opened,
-            0
-            | ImGuiWindowFlags_NoBringToFrontOnFocus
-            | ImGuiWindowFlags_MenuBar
-            //| ImGuiWindowFlags_NoResize
-            //| ImGuiWindowFlags_NoMove
-            | ImGuiWindowFlags_NoCollapse
-        );
-
-        if (ImGui::IsItemActive())
-            ImGuiStudio::Designer::Instance().internal->active_widget = this;
-
-        x(ImGui::GetWindowPos().x), y(ImGui::GetWindowPos().y);
-        width(ImGui::GetWindowSize().x), height(ImGui::GetWindowSize().y);
-
-        if (!is_opened) { End(); hide(); return; }
-
-        for (std::size_t i = 0; i < children.size(); ++i)
-        {
-            children[i]->Begin();
-            children[i]->End();
-        }
-    }
-
-    void End()
-    {
-        if (hidden()) return;
-
-        ImGui::End();
-    }
-};
-
-struct IPropertyEdit
-{
-    std::vector<ImGuiStudio::Properties::IProperty*> props;
-};
-
-template<GIDE::Properties::Type T>
-struct PropertyEdit
-    : ImGuiStudio::Designer::impl::Edit<typename ImGuiStudio::Properties::Property<T>::ValueType >
-    , IPropertyEdit
-{
-    typedef ImGuiStudio::Properties::Property<T> Properties;
-    typedef typename Properties::ValueType ValueType;
-
-    virtual ValueType value() const {
-        ValueType result = ValueType();
-        for (auto& prop : props)
-            if (prop->value<T>() != result) result = prop->value<T>();
+        static std::map<std::size_t, Widgets::Window> windows;
+        std::size_t id = widget_id();
+        Widgets::Window& result = windows[id];
+        result.id = id;
+        result.parent(parent);
         return result;
     }
 
-    virtual void value(const ValueType& val) {
-        for (auto& prop : props)
-            prop->value<T>(val);
-    }
-};
-
-
-MainWindow& ImGuiStudio_MainWindow()
-{
-    static MainWindow result;
-
-    return result;
-}
-
-void ImGuiStudio::MainWindow::Begin()
-{
-    ImGuiStudio_MainWindow().Begin();
-}
-
-bool ImGuiStudio::MainWindow::Opened()
-{
-    return !ImGuiStudio_MainWindow().hidden();
-}
-
-void ImGuiStudio::MainWindow::End()
-{
-    ImGuiStudio_MainWindow().End();
-}
-
-struct ImGuiStudio::Designer::impl::Collapsible
-    : Basic<Widgets::Collapsible>
-{
- 
-    std::vector<Child*> children;
-
-    void AddChild(Child& value, std::size_t tab_order = 0)
+    static Widgets::Collapsible& CreateCollapsible(Widgets::Window& parent)
     {
-        if (&value == this)
-            throw("");
-
-        children.push_back(&value);
+        static std::map<std::size_t, Widgets::Collapsible> collapsibles;
+        std::size_t id = widget_id();
+        Widgets::Collapsible& result = collapsibles[id];
+        result.id = id;
+        result.parent(parent);
+        return result;
     }
 
-    void RemoveChild(Child& value)
+    static Widgets::Button& CreateButton(Widgets::Window& parent)
     {
-        for (std::size_t i = 0; i < children.size(); ++i)
-        {
-            if (children[i]->id == value.id)
-                children.erase(children.begin() + i);
-        }
+        static std::map<std::size_t, Widgets::Button> buttons;
+        std::size_t id = widget_id();
+        Widgets::Button& result = buttons[id];
+        result.id = id;
+        result.parent(parent);
+        return result;
     }
 
-    void Begin()
+    template<class ValueT>
+    static Widgets::Edit<ValueT>& CreateEdit(Widgets::Window& parent)
     {
-
-        
-        ImGui::BeginGroup();
-
-        bool is_collapsed = 
-            !ImGui::CollapsingHeader(name().c_str(), ImGuiTreeNodeFlags_DefaultOpen);
-
-        if (ImGui::IsItemActive())
-            ImGuiStudio::Designer::Instance().internal->active_widget = this;
-
-        if (is_collapsed != collapsed())
-        {
-            collapse(is_collapsed);
-        }
-            
-        if (!is_collapsed)
-        {
-            for (std::size_t i = 0; i < children.size(); ++i)
-            {
-                children[i]->Begin();
-                children[i]->End();
-            }
-        }
-        ImGui::EndGroup();
-        
+        typedef Widgets::Edit<ValueT> Edit;
+        static std::map<std::size_t, Edit> edits;
+        std::size_t id = widget_id();
+        Edit& result = edits[id];
+        result.id = id;
+        result.parent(parent);
+        return result;
     }
 
+    static Widgets::SubWindow& CreateSubWindow(Widgets::Window& parent)
+    {
+        static std::map<std::size_t, Widgets::SubWindow> subwindows;
+        std::size_t id = widget_id();
+        Widgets::SubWindow& result = subwindows[id];
+        result.id = id;
+        result.parent(parent);
+        return result;
+    }
 
-};
-
-ImGuiStudio::Designer::impl::impl()
-    : top_window(ImGuiStudio_MainWindow())
-    , active_widget(0)
-    , active_component(0)
-{
-
+    static Widgets::MainWindow& MainWindow() {
+        static Widgets::MainWindow instance;
+        return instance;
+    }
 }
 
-//ImGuiStudio::Designer::Widgets::IWindow& ImGuiStudio::Designer::widget()
-//{
-//    Designer::Widgets::IWindow *test = internal->top_window;
-//    return *internal->top_window;
-//}
 
-
-static std::size_t widget_id()
-{
-    static std::size_t result = 0;
-    return ++result;
-}
-
-ImGuiStudio::Designer::impl::Window& ImGuiStudio::Designer::impl::CreateWindow()
-{
-    
-    std::size_t id = widget_id();
-    Window& result = windows[id];
-    result.id = id;
-    result.parent(top_window);
-    return result;
-}
-
-ImGuiStudio::Designer::impl::Collapsible& ImGuiStudio::Designer::impl::CreateCollapsible()
-{
-    std::size_t id = widget_id();
-    Collapsible& result = collapsibles[id];
-    result.id = id;
-    result.parent(top_window);
-    return result;
-}
-
-ImGuiStudio::Designer::impl::Button& ImGuiStudio::Designer::impl::CreateButton()
-{
-    std::size_t id = widget_id();
-    Button& result = buttons[id];
-    result.id = id;
-    result.parent(top_window);
-    return result;
-}
-
-template<class ValueT>
-ImGuiStudio::Designer::impl::Edit<ValueT>& ImGuiStudio::Designer::impl::CreateEdit()
-{
-    typedef Edit<ValueT> Edit;
-    static std::map<std::size_t, Edit> edits;
-    std::size_t id = widget_id();
-    Edit& result = edits[id];
-    result.id = id;
-    result.parent(top_window);
-    return result;
-}
-
-ImGuiStudio::Designer::impl::SubWindow& ImGuiStudio::Designer::impl::CreateSubWindow(Window& parent)
-{
-    std::size_t id = widget_id();
-    SubWindow& result = subwindows[id];
-    result.id = id;
-    result.parent(parent);
-    return result;
-}
-
-ImGuiStudio::Designer::Designer()
-    : internal(new impl())
+void ImGuiStudio::Init()
 {
     struct lambdas
     {
-        static GIDE::System::Display::SizeType DisplaySize()
+        static UI::Widgets::IWindow& CreateWindow()
         {
-            typedef GIDE::System::Display::SizeType result_type;
-
-            result_type result = {
-                result_type::Unit(ImGui::GetIO().DisplaySize.x),
-                result_type::Unit(ImGui::GetIO().DisplaySize.y)
-            };
-            if (result.height < 10 || result.width < 10 || result.height > 9999 || result.width > 9999)
-            {
-                result.height = 720, result.width = 240;
-            }
-            return result;
-        }
-    };
-
-    GIDE::RTTI::Override<
-        static_cast<decltype(lambdas::DisplaySize)&>(GIDE::System::Display::Size)
-    >(lambdas::DisplaySize);
-}
-
-
-
-
-ImGuiStudio::Designer& ImGuiStudio_Designer()
-{
-    static ImGuiStudio::Designer result;
-    
-    return result;
-}
-
-ImGuiStudio::Designer& ImGuiStudio::Designer::Instance()
-{
-    return ImGuiStudio_Designer();
-}
-
-bool ImGuiStudio::Designer::Opened()
-{
-    return !ImGuiStudio_Designer().widget().hidden();
-}
-
-
-
-void ImGuiStudio::Designer::Begin()
-{
-    //ImGuiStudio_Designer().step();
-    //ImGuiStudio_Designer().internal->top_window.Begin();
-    //ImGuiStudio_Designer().internal->toolbox->Begin();
-
-    auto components = ImGuiStudio_Designer().form().components();
-    ImVec2 drag_delta;
-    bool mouse_moving = false;
-
-    if (!ImGui::IsMouseReleased(ImGuiMouseButton_Left))
-    {
-        
-        drag_delta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left);
-        mouse_moving = (drag_delta.x || drag_delta.y);
-
-        if (!mouse_moving)
-        {
-            if (ImGui::IsKeyDown(ImGuiKey_RightArrow))
-                drag_delta.x += 1.f;
-            if (ImGui::IsKeyDown(ImGuiKey_LeftArrow))
-                drag_delta.x -= 1.f;
-
-            if (ImGui::IsKeyDown(ImGuiKey_DownArrow))
-                drag_delta.y += 1.f;
-            if (ImGui::IsKeyDown(ImGuiKey_UpArrow))
-                drag_delta.y -= 1.f;
-        }
-    }
-    if (drag_delta.x || drag_delta.y)
-    {
-        bool moving_widgets = !mouse_moving;
-        if (mouse_moving)
-        for (auto component : components)
-        {
-            if (dynamic_cast<Widgets::IBasic*>(ImGuiStudio_Designer().internal->active_widget) == &component->widget())
-            {
-                ImGuiStudio_Designer().internal->active_component = component;
-                if (component->is_selected())
-                {
-                    moving_widgets = true;
-                    break;
-                }
-            }
-        }
-        if (moving_widgets)
-            for (auto component : components)
-            {
-                auto pos = component->widget().position();
-                pos.x += drag_delta.x;
-                pos.y += drag_delta.y;
-                component->widget().position(pos);
-            }
-    }
-}
-
-void ImGuiStudio::Designer::End()
-{
-    //ImGuiStudio_Designer().internal->toolbox->End();
-    //ImGuiStudio_Designer().internal->top_window.End();
-
-    ImGuiStudio_Designer().internal->active_widget = 0;
-}
-
-void ImGuiStudio::Designer::Step()
-{
-    ImGuiStudio_Designer().step();
-}
-
-
-
-void ImGuiStudio::Designer::Init()
-{
-    struct lambdas 
-    {
-        static Widgets::IWindow &CreateWindow()
-        {
-            return ImGuiStudio_Designer().internal->CreateWindow();
+            return ImGuiStudio::CreateWindow(ImGuiStudio::MainWindow());
         }
 
-        static Widgets::ISubWindow& CreateSubWindow(Widgets::IWindow &parent)
+        static UI::Widgets::ISubWindow& CreateSubWindow(UI::Widgets::IWindow& parent)
         {
-            return ImGuiStudio_Designer().internal->CreateSubWindow(dynamic_cast<ImGuiStudio::Designer::impl::Window&>(parent));
+            return ImGuiStudio::CreateSubWindow(dynamic_cast<ImGuiStudio::Widgets::Window&>(parent));
         }
 
-        static Widgets::IButton &CreateButton()
+        static UI::Widgets::IButton& CreateButton()
         {
-            return ImGuiStudio_Designer().internal->CreateButton();
+            return ImGuiStudio::CreateButton(ImGuiStudio::MainWindow());
         }
 
-        static Widgets::ICollapsible &CreateCollapsible()
+        static UI::Widgets::ICollapsible& CreateCollapsible()
         {
-            return ImGuiStudio_Designer().internal->CreateCollapsible();
+            return ImGuiStudio::CreateCollapsible(ImGuiStudio::MainWindow());
         }
 
-        static Widgets::IEditFloat& CreateFloatEdit()
+        static UI::Widgets::IEdit<float>& CreateFloatEdit()
         {
-            return ImGuiStudio_Designer().internal->CreateEdit<float>();
+            return ImGuiStudio::CreateEdit<float>(ImGuiStudio::MainWindow());
         }
     };
 
@@ -1536,91 +1400,8 @@ void ImGuiStudio::Designer::Init()
     GIDE::RTTI::Override<GIDE::UI::Widgets::Collapsible::Create>(lambdas::CreateCollapsible);
     GIDE::RTTI::Override<GIDE::UI::Widgets::Edit<float>::Create>(lambdas::CreateFloatEdit);
 
-    ImGuiStudio_Designer().init();
-    ImGuiStudio_Designer().widget().name("Designer");
-    ImGuiStudio_Designer().toolbox().widget().name("Toolbox");
+    Designer::Init();
+    Properties::Init();
 }
 
-struct ImGuiStudio::Properties::impl
-{
-    ::MainWindow &top_window;
-
-    impl() : top_window(ImGuiStudio_MainWindow()) {}
-
-    struct FloatingPoint
-        : Property<GIDE::Properties::FloatingPoint>
-    {
-        void value(const ValueType& v) {
-            fp_value = v;
-        }
-
-        ValueType value() const {
-            return fp_value;
-        }
-
-        std::string name() const {
-            return name_str;
-        }
-
-        ValueType fp_value;
-        std::string name_str;
-    };
-
-    std::map<std::string, FloatingPoint> fp_props;
-};
-
-ImGuiStudio::Properties::Properties()
-    : internal(new impl())
-{
-
-}
-
-ImGuiStudio::Properties& ImGuiStudio::Properties::Instance()
-{
-    static Properties result; return result;
-}
-
-void ImGuiStudio::Properties::Init()
-{
-    Instance().widget().name("Properties");
-}
-
-void ImGuiStudio::Properties::Begin()
-{
-    //Instance().widget().Begin();
-
-    auto active_component = ImGuiStudio_Designer().internal->active_component;
-    auto active_widget = ImGuiStudio_Designer().internal->active_widget;
-    
-    if (active_component)
-    {
-
-        Instance().clear();
-
-        {
-            for (auto property : active_component->type().properties())
-            {
-                //Instance().add(property.first, property.second);
-                
-                if (property.second == GIDE::Properties::FloatingPoint)
-                {
-                    auto& prop = Instance().internal->fp_props[property.first];
-                    prop.name_str = property.first;
-                    Instance().add(active_component->type().group(), prop);
-                }
-            }
-        }
-
-    }
-}
-
-void ImGuiStudio::Properties::End()
-{
-    //Instance().internal->top_window.End();
-}
-
-bool ImGuiStudio::Properties::Opened()
-{
-    return !Instance().widget().hidden();
-}
 

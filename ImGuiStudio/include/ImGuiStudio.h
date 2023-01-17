@@ -10,17 +10,13 @@
 
 // third-party includes
 #include <ImGui/imgui.h>
-#include <GenericGuiStudio/include/Designer.h>
-#include <GenericGuiStudio/include/Properties.h>
-#include <GenericGuiStudio/include/GIDE.h>
+#include <GenericGuiStudio/include/UserInterface.h>
 
 // std includes
 #include <map>
 
-namespace ImGuiStudio
+namespace ImGui
 {
-    struct ID; // unique ID type for serialization purpose
-
     namespace Widgets
     {
         struct ID; // unique ID type for serialization purpose
@@ -107,67 +103,21 @@ namespace ImGuiStudio
         } // namespace Menus
 
     } // namespace Widgets
+} // namespace ImGui
+
+namespace ImGuiStudio
+{
+    typedef GIDE::UI::UI<float, float> UI;
+
+    struct ID; // unique ID type for serialization purpose
+
+    void Init();
 
     bool Begin(const ImVec2& size, bool* opened = NULL); // create Studio GUI main window
     bool Begin(bool* opened = NULL); // create Studio GUI main window
-    void DrawInterface();
     void End(); // end Studio GUI main window
 
-    struct MainWindow
-    {
-        static void Begin();
-        static bool Opened();
-        static void End();
-    };
-
-    struct Designer
-        : private GIDE::UI::Designer<float, float>
-    {
-        typedef GIDE::UI::Designer<float, float> Type;
-        Designer();
-
-        static Designer& Instance();
-
-        using Type::toolbox;
-        using Type::form;
-
-        static void Begin();
-        static void End();
-        static void Init();
-        static void Step();
-        static bool Opened();
-
-
-        struct impl;
-        impl *internal;
-    };
-
-    struct Properties
-        : private GIDE::UI::Properties<float, float>
-    {
-        typedef GIDE::UI::Properties<float, float> Type;
-        using typename Type::IProperty;
-
-        template<GIDE::Properties::Type T>
-        struct Property
-            : GIDE::UI::Properties<float, float>::Property<T>
-        {
-
-        };
-
-        Properties();
-
-        static Properties& Instance();
-
-        static void Init();
-        static void Begin();
-        static void End();
-        static bool Opened();
-
-
-        struct impl;
-        impl* internal;
-    };
+    UI::Designer& Designer();
 
 } // namespace ImGuiStudio
 
