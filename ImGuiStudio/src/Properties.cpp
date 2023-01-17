@@ -1,6 +1,8 @@
 #include <Properties.h>
 
-#include <ImGui/imgui.h>
+
+#include <ImGuiStudio.h>
+
 
 template<GIDE::Properties::Type T>
 struct Property
@@ -54,36 +56,36 @@ void ImGuiStudio::Properties::Init()
 
 void ImGuiStudio::Properties::Begin()
 {
-    //Instance().widget().Begin();
 
-    //auto active_component = ImGuiStudio_Designer().internal->active_component;
-    //auto active_widget = ImGuiStudio_Designer().internal->active_widget;
-    //
-    //if (active_component)
-    //{
-    //
-    //    Instance().clear();
-    //
-    //    {
-    //        for (auto property : active_component->type().properties())
-    //        {
-    //            //Instance().add(property.first, property.second);
-    //
-    //            if (property.second == GIDE::Properties::FloatingPoint)
-    //            {
-    //                auto& prop = Instance().internal->fp_props[property.first];
-    //                prop.name_str = property.first;
-    //                Instance().add(active_component->type().group(), prop);
-    //            }
-    //        }
-    //    }
-    //
-    //}
+    auto components = ImGuiStudio::Designer().form().components();
+
+    for (auto component : components)
+    {
+        if (component->is_selected())
+        {
+
+            Instance().clear();
+
+            {
+                for (auto property : component->type().properties())
+                {
+                    //Instance().add(property.first, property.second);
+
+                    if (property.second == GIDE::Properties::FloatingPoint)
+                    {
+                        auto& prop = Instance().internal->fp_props[property.first];
+                        prop.name_str = property.first;
+                        Instance().add(component->type().group(), prop);
+                    }
+                }
+            }
+
+        }
+    }
 }
 
 void ImGuiStudio::Properties::End()
 {
-    //Instance().internal->top_window.End();
 }
 
 bool ImGuiStudio::Properties::Opened()
