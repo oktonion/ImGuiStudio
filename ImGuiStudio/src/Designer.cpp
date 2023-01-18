@@ -2,10 +2,49 @@
 
 #include <ImGui/imgui.h>
 
+namespace ImGui
+{
+    void DrawBorder(ImVec2 obj_pos, ImVec2 obj_size, float distance_thickness = 5.f, ImU32 col = IM_COL32(255, 255, 0, 255))
+    {
+        ImVec2 vMin = { ImGui::GetWindowPos().x + obj_pos.x - distance_thickness, ImGui::GetWindowPos().y + obj_pos.y - distance_thickness };
+        ImVec2 vMax = { vMin.x + obj_size.x + (distance_thickness * 2.f), vMin.y + obj_size.y + (distance_thickness * 2.f) };
+        //ImGui::GetForegroundDrawList( )->AddRect( vMin, vMax, col ); //will draw on top of everything 
+        ImGui::GetWindowDrawList()->AddRect(vMin, vMax, col, 0.f, 0, 0.01f);
+    }
+}
+
+
+namespace ImGuiStudio
+{
+    namespace Widgets
+    {
+        struct DesignerWindow
+            : Window
+        {
+            ImVec2 selection_start;
+            ImVec2 selection_end;
+            bool selection_in_progress;
+            void Begin()
+            {
+                Window::Begin();
+
+                selection_in_progress = (!ImGui::IsMouseReleased(ImGuiMouseButton_Left));
+
+                if (selection_in_progress)
+                {
+                    selection_end = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left);
+                    ImGui::DrawBorder(selection_start, selection_end);
+                }
+            }
+        };
+    }
+}
 
 struct ImGuiStudio::Designer::impl
 {
     ImGuiStudio::Designer::Form::Component* active_component;
+
+    ImGuiStudio::Widgets::DesignerWindow window;
 };
 
 
@@ -53,68 +92,76 @@ bool ImGuiStudio::Designer::Opened()
     return !Instance().widget().hidden();
 }
 
-
-
-void ImGuiStudio::Designer::Begin()
+ImGuiStudio::Designer::Widget& ImGuiStudio::Designer::widget() const
 {
-    auto components = Instance().form().components();
+    return internal->window;
+}
+
+
+void ImGuiStudio::Designer::step()
+{
+    auto components = form().components();
     ImVec2 drag_delta;
     bool mouse_moving = false;
 
-    if (!ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+    //if (widget().selected())
     {
 
-        drag_delta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left);
-        mouse_moving = (drag_delta.x || drag_delta.y);
-
-        if (!mouse_moving)
+        if (!ImGui::IsMouseReleased(ImGuiMouseButton_Left))
         {
-            if (ImGui::IsKeyDown(ImGuiKey_RightArrow))
-                drag_delta.x += 1.f;
-            if (ImGui::IsKeyDown(ImGuiKey_LeftArrow))
-                drag_delta.x -= 1.f;
+            drag_delta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left);
+            mouse_moving = (drag_delta.x || drag_delta.y);
 
-            if (ImGui::IsKeyDown(ImGuiKey_DownArrow))
-                drag_delta.y += 1.f;
-            if (ImGui::IsKeyDown(ImGuiKey_UpArrow))
-                drag_delta.y -= 1.f;
-        }
-    }
-    if (drag_delta.x || drag_delta.y)
-    {
-        bool moving_widgets = !mouse_moving;
-        if (mouse_moving)
-            for (auto component : components)
+            if (!mouse_moving)
             {
-                if (component->widget().selected())
+                if (ImGui::IsKeyDown(ImGuiKey_RightArrow))
+                    drag_delta.x += 1.f;
+                if (ImGui::IsKeyDown(ImGuiKey_LeftArrow))
+                    drag_delta.x -= 1.f;
+
+                if (ImGui::IsKeyDown(ImGuiKey_DownArrow))
+                    drag_delta.y += 1.f;
+                if (ImGui::IsKeyDown(ImGuiKey_UpArrow))
+                    drag_delta.y -= 1.f;
+            }
+
+            
+        }
+
+        if (ImGui::IsMouseDown(ImGuiMouseButton_Left) && !ImGui::IsMouseDragging(ImGuiMouseButton_Left))
+        {
+            internal->window.selection_start = ImVec2(ImGui::GetMousePos().x - widget().x(), ImGui::GetMousePos().y - widget().y());
+        }
+        if (drag_delta.x || drag_delta.y)
+        {
+
+            bool moving_widgets = !mouse_moving;
+            if (mouse_moving)
+                for (auto component : components)
                 {
-                    Instance().internal->active_component = component;
-                    if (component->is_selected())
+                    if (component->widget().selected())
                     {
-                        moving_widgets = true;
-                        break;
+                        internal->active_component = component;
+                        if (component->is_selected())
+                        {
+                            moving_widgets = true;
+                            break;
+                        }
                     }
                 }
-            }
-        if (moving_widgets)
-            for (auto component : components)
-            {
-                auto pos = component->widget().position();
-                pos.x += drag_delta.x;
-                pos.y += drag_delta.y;
-                component->widget().position(pos);
-            }
+            if (moving_widgets)
+                for (auto component : components)
+                {
+                    auto pos = component->widget().position();
+                    pos.x += drag_delta.x;
+                    pos.y += drag_delta.y;
+                    component->widget().position(pos);
+                }
+        }
     }
 }
 
-void ImGuiStudio::Designer::End()
-{
-}
 
-void ImGuiStudio::Designer::Step()
-{
-    Instance().step();
-}
 
 
 

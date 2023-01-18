@@ -118,6 +118,7 @@ namespace ImGuiStudio
     void End(); // end Studio GUI main window
 
     UI::Designer& Designer();
+    UI::Properties& Properties();
 
 } // namespace ImGuiStudio
 

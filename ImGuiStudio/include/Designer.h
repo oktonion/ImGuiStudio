@@ -2,6 +2,7 @@
 #define _IMGUI_STUDIO_DESIGNER
 
 #include <GenericGuiStudio/include/Designer.h>
+#include "Widgets.h"
 
 namespace ImGuiStudio
 {
@@ -16,10 +17,10 @@ namespace ImGuiStudio
         using Type::toolbox;
         using Type::form;
 
-        static void Begin();
-        static void End();
+        Widget& widget() const override;
+
+        void step() override;
         static void Init();
-        static void Step();
         static bool Opened();
 
 

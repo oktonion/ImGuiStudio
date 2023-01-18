@@ -44,7 +44,7 @@ ImGuiStudio::Properties::Properties()
 
 }
 
-ImGuiStudio::Properties& ImGuiStudio::Properties::Instance()
+struct ImGuiStudio::Properties& ImGuiStudio::Properties::Instance()
 {
     static Properties result; return result;
 }

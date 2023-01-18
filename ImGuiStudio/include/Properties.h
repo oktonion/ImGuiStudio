@@ -6,7 +6,7 @@
 namespace ImGuiStudio
 {
     struct Properties
-        : private GIDE::UI::Properties<float, float>
+        : public GIDE::UI::Properties<float, float>
     {
         typedef GIDE::UI::Properties<float, float> Type;
         using typename Type::IProperty;

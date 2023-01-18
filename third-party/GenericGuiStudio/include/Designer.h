@@ -244,6 +244,9 @@ namespace GIDE
         struct Designer<PosUnitT, SizeUnitT>::Form
             : public Designer<void, void>::Form
         {
+            typedef PosUnitT Position2DUnit;
+            typedef SizeUnitT SizeUnit;
+
             typedef typename Toolbox::Component ToolboxComponent;
             typedef typename Designer::Widgets::ISubWindow Widget;
             typedef Designer<void, void> IDesigner;
