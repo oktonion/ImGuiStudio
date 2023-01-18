@@ -132,6 +132,19 @@ void ImGuiStudio::Designer::step()
         {
             internal->window.selection_start = ImVec2(ImGui::GetMousePos().x - widget().x(), ImGui::GetMousePos().y - widget().y());
         }
+
+
+        if (internal->window.selection_in_progress)
+        {
+            for (auto component : components)
+            {
+                if (component->widget().x() > internal->window.selection_end.x && component->widget().y() > internal->window.selection_end.y)
+                {
+                    component->widget().click();
+                }
+            }
+        }
+
         if (drag_delta.x || drag_delta.y)
         {
 
@@ -159,6 +172,8 @@ void ImGuiStudio::Designer::step()
                 }
         }
     }
+
+    toolbox().step(form());
 }
 
 
