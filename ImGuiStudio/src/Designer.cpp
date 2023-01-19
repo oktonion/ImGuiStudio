@@ -24,7 +24,7 @@ namespace ImGui
 
         if (ImGui::IsMouseClicked(mouse_button))
             *start_pos = ImGui::GetMousePos();
-        if (ImGui::IsMouseDown(mouse_button))
+        if (ImGui::IsMouseDown(mouse_button) && ImGui::IsMouseDragging(mouse_button))
         {
             *end_pos = ImGui::GetMousePos();
             ImDrawList* draw_list = ImGui::GetForegroundDrawList(); //ImGui::GetWindowDrawList();
