@@ -177,7 +177,45 @@ void ImGuiStudio::Designer::step()
 }
 
 
+namespace ImGuiStudio
+{
+    namespace Widgets
+    {
+        struct DesignerWidget
+            : Button
+        {
+            void Begin()
+            {
+                Button::Begin();
+                if (selected())
+                    ImGui::DrawBorder({ x(), y() }, { width(), height() });
+            }
+        };
+    }
+    struct DesignerComponent
+        : Designer::Form::Component
+    {
+        typedef Designer::Toolbox::Component ToolboxComponent;
 
+        virtual Widget& widget() { return default_widget; }
+        virtual const Widget& widget() const { return default_widget; }
+
+        const ToolboxComponent& type() const { return *comp_type; }
+
+        Widgets::DesignerWidget default_widget;
+        const ToolboxComponent* comp_type;
+
+        static DesignerComponent& Create(const ToolboxComponent& tbcomp)
+        {
+            static std::map<std::string, std::vector<DesignerComponent>/**/> components;
+            components[tbcomp.ID()].resize(components[tbcomp.ID()].size() + 1);
+            DesignerComponent& result = components[tbcomp.ID()].back();
+            result.comp_type = &tbcomp;
+            result.default_widget.caption(tbcomp.name());
+            return result;
+        }
+    };
+}
 
 
 void ImGuiStudio::Designer::Init()
@@ -185,4 +223,14 @@ void ImGuiStudio::Designer::Init()
     Instance().init();
     Instance().widget().name("Designer");
     Instance().toolbox().widget().name("Toolbox");
+
+    struct lambdas
+    {
+        static Form::Component& Create(const Toolbox::Component& tbcomp)
+        {
+            return DesignerComponent::Create(tbcomp);
+        }
+    };
+
+    GIDE::RTTI::Override<Form::Component::Create>(lambdas::Create);
 }

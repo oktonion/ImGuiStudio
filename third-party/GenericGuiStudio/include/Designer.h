@@ -55,16 +55,151 @@ namespace GIDE
         template<>
         class Designer<void, void> {
         public:
-            struct Form { 
-                enum Tag { Create };
-                struct Component {
-                    enum Tag { Create };
-                };
-            };
+            template<class PosUnitT, class SizeUnitT>
+            struct Component;
+
+            template<class PosUnitT, class SizeUnitT>
+            struct Form;
+
+        };
+
+        template<>
+        struct Designer<void, void>::Form<void, void> {
+            enum Tag {Create};
+        };
+
+        template<>
+        struct Designer<void, void>::Component<void, void> {
+            enum Tag { Create };
         };
 
         template<class PosUnitT, class SizeUnitT>
-        class Designer : public Designer<void, void>
+        struct Designer<void, void>::Component
+            : Designer<void, void>::Component<void, void>
+        {
+
+            typedef PosUnitT Position2DUnit;
+            typedef SizeUnitT SizeUnit;
+
+            typedef typename Toolbox::Component ToolboxComponent;
+
+            typedef GIDE::UI::Widgets::IBasic<PosUnitT, SizeUnitT> Widget;
+
+            virtual bool is_container() const { return type().is_containter(); }
+            virtual bool is_selected() const { return widget().clicked(); }
+            virtual Widget& widget() = 0;
+            virtual const Widget& widget() const = 0;
+
+            virtual const ToolboxComponent& type() const = 0;
+
+            virtual ~Component() {}
+        };
+
+        template<class PosUnitT, class SizeUnitT>
+        struct Designer<void, void>::Form
+            : Designer<void, void>::Form<void, void>
+        {
+            typedef PosUnitT Position2DUnit;
+            typedef SizeUnitT SizeUnit;
+
+            typedef typename Toolbox::Component ToolboxComponent;
+            typedef GIDE::UI::Widgets::ISubWindow<PosUnitT, SizeUnitT> Widget;
+            typedef Designer<void, void> IDesigner;
+            typedef Designer<void, void>::Component<PosUnitT, SizeUnitT> Component;
+
+            typedef Designer<PosUnitT, SizeUnitT> Designer;
+
+            virtual void drop(const ToolboxComponent& toolbox_component, Component& other_component)
+            {
+                Component& component = CreateComponent(toolbox_component);
+
+                if (other_component.widget().parent())
+                    component.widget().parent(*other_component.widget().parent());
+
+                if (!component.widget().parent())
+                {
+                    GIDE::System::Print("cannot set parent on form '" + widget().name() + "' for '" + component.widget().name() + "' widget: reseting to form '" + widget().name() + "' as default");
+                    component.widget().parent(widget());
+                }
+
+                if (!component.widget().parent())
+                    GIDE::System::Abort("widget placing on form '" + widget().name() + "' for '" + component.widget().name() + "' failed: cannot set parent", GIDE::System::Log::Fatal);
+
+                dropped_components.push_back(&component);
+            }
+
+            void drop(const ToolboxComponent& toolbox_component)
+            {
+                Component& component = CreateComponent(toolbox_component);
+
+                component.widget().parent(widget());
+
+                if (!component.widget().parent())
+                    GIDE::System::Abort("widget placing on form '" + widget().name() + "' for '" + component.widget().name() + "' failed: cannot set parent", GIDE::System::Log::Fatal);
+
+                dropped_components.push_back(&component);
+            }
+
+            void remove(const std::string& name)
+            {
+                for (typename std::list<Component*>::iterator it = dropped_components.begin(); dropped_components.end() != it; ++it)
+                {
+                    if ((*it)->name() == name)
+                    {
+                        delete (*it);
+                        dropped_components.erase(it);
+                        return;
+                    }
+                }
+
+                GIDE::System::Print("component remove failed: cannot find '" + name + "' component on form '" + widget().name());
+            }
+
+            const std::list<Component*>& components() const { return dropped_components; }
+
+            virtual Widget& widget() const = 0;
+
+        protected:
+            std::list<Component*> dropped_components;
+
+            static Component& CreateComponent(const ToolboxComponent& toolbox_component)
+            {
+                struct lambdas
+                {
+                    typedef Component ComponentT;
+                    typedef ToolboxComponent ToolboxComponentT;
+                    typedef Designer DesignerT;
+
+                    static ComponentT& Create(const ToolboxComponentT& toolbox_component)
+                    {
+                        struct DefaultComponent
+                            : ComponentT
+                        {
+                            virtual Widget& widget() { return *default_widget; }
+                            virtual const Widget& widget() const { return *default_widget; }
+
+                            const ToolboxComponentT& type() const { return *comp_type; }
+
+                            Widget* default_widget;
+                            const ToolboxComponentT* comp_type;
+
+                            ~DefaultComponent() { delete default_widget; }
+                        };
+                        typedef GIDE::UI::Widgets::IButton<PosUnitT, SizeUnitT> DefaultWidget;
+                        DefaultComponent* comp = new DefaultComponent();
+                        comp->comp_type = &toolbox_component;
+                        comp->default_widget = &DefaultWidget::Create();
+                        comp->default_widget->caption(comp->type().name());
+                        return *comp;
+                    }
+                };
+                return detail::Global(lambdas::Create).Get<CreateComponent>()(toolbox_component);
+            }
+        };
+
+        template<class PosUnitT, class SizeUnitT>
+        class Designer 
+            : public Designer<void, void>
         {
         public:
 
@@ -124,7 +259,7 @@ namespace GIDE
                 return result;
             }
 
-            struct Form;
+            typedef Form<PosUnitT, SizeUnitT> Form;
 
             virtual Form& form() {
                 
@@ -240,113 +375,7 @@ namespace GIDE
             std::map<std::string, typename Designer::Widgets::IButton*>      component_widgets;
         };
 
-        template<class PosUnitT, class SizeUnitT>
-        struct Designer<PosUnitT, SizeUnitT>::Form
-            : public Designer<void, void>::Form
-        {
-            typedef PosUnitT Position2DUnit;
-            typedef SizeUnitT SizeUnit;
 
-            typedef typename Toolbox::Component ToolboxComponent;
-            typedef typename Designer::Widgets::ISubWindow Widget;
-            typedef Designer<void, void> IDesigner;
-
-            struct Component
-                : public IDesigner::Form::Component
-            {
-                typedef typename Designer::Widgets::IBasic Widget;
-
-                virtual bool is_container() const { return type().is_containter(); }
-                virtual bool is_selected() const { return widget().clicked(); }
-                virtual Widget& widget() const = 0;
-
-                virtual const ToolboxComponent& type() const = 0;
-
-                virtual ~Component() {}
-            };
-
-            typedef Designer<PosUnitT, SizeUnitT> Designer;
-
-            virtual void drop(const ToolboxComponent& toolbox_component, Component& other_component)
-            {
-                Component& component = CreateComponent(toolbox_component);
-
-                if (other_component.widget().parent())
-                    component.widget().parent(*other_component.widget().parent());
-
-                if (!component.widget().parent())
-                {
-                    GIDE::System::Print("cannot set parent on form '" + widget().name() + "' for '" + component.widget().name() + "' widget: reseting to form '" + widget().name() + "' as default");
-                    component.widget().parent(widget());
-                }
-
-                if (!component.widget().parent())
-                    GIDE::System::Abort("widget placing on form '" + widget().name() + "' for '" + component.widget().name() + "' failed: cannot set parent", GIDE::System::Log::Fatal);
-
-                dropped_components.push_back(&component);
-            }
-
-            void drop(const ToolboxComponent& toolbox_component)
-            {
-                Component& component = CreateComponent(toolbox_component);
-
-                component.widget().parent(widget());
-
-                if (!component.widget().parent())
-                    GIDE::System::Abort("widget placing on form '" + widget().name() + "' for '" + component.widget().name() + "' failed: cannot set parent", GIDE::System::Log::Fatal);
-
-                dropped_components.push_back(&component);
-            }
-
-            void remove(const std::string &name)
-            {
-                for (typename std::list<Component*>::iterator it = dropped_components.begin(); dropped_components.end() != it; ++it)
-                {
-                    if ((*it)->name() == name)
-                    {
-                        delete (*it);
-                        dropped_components.erase(it);
-                        return;
-                    }
-                }
-
-                GIDE::System::Print("component remove failed: cannot find '" + name + "' component on form '" + widget().name());
-            }
-
-            const std::list<Component*>& components() const { return dropped_components; }
-
-            virtual Widget& widget() const = 0;
-
-        protected:
-            std::list<Component*> dropped_components;
-
-            static Component& CreateComponentImpl(const ToolboxComponent& toolbox_component)
-            {
-                struct DefaultComponent
-                    : Component
-                {
-                    virtual Widget& widget() const { return *default_widget; }
-
-                    const ToolboxComponent& type() const { return *comp_type; }
-
-                    Widget* default_widget;
-                    const ToolboxComponent* comp_type;
-
-                    ~DefaultComponent() { delete default_widget; }
-                };
-                typedef typename Designer::Widgets::IButton DefaultWidget;
-                DefaultComponent* comp = new DefaultComponent();
-                comp->comp_type = &toolbox_component;
-                comp->default_widget = &DefaultWidget::Create();
-                comp->default_widget->caption(comp->type().name());
-                return *comp;
-            }
-
-            static Component& CreateComponent(const ToolboxComponent& toolbox_component)
-            {
-                return detail::Global(CreateComponentImpl).Get<CreateComponent>()(toolbox_component);
-            }
-        };
 
     }
 } // namespace GIDE
@@ -473,18 +502,37 @@ namespace GIDE
             detail::Global(IEdit::Create).Get<IEdit::Create>() = value;
         }
 
-        template<UI::Designer<void, void>::Form::Tag, class PosUnitT, class SizeUnitT>
-        void Override(typename UI::Designer<PosUnitT, SizeUnitT>::Form& (&value)(const typename UI::Designer<PosUnitT, SizeUnitT>::Toolbox::Component&))
+        template<UI::Designer<void, void>::Form<void, void>::Tag, class PosUnitT, class SizeUnitT>
+        void Override(typename UI::Designer<void, void>::Form<PosUnitT, SizeUnitT>& (&value)(const typename UI::Designer<PosUnitT, SizeUnitT>::Toolbox::Component&))
         {
-            typedef typename UI::Designer<PosUnitT, SizeUnitT> Designer;
-            detail::Global(Designer::CreateForm).Get<Designer::CreateForm>() = value;
+            typedef UI::Designer<PosUnitT, SizeUnitT> Designer;
+            typedef
+            typename UI::Designer<void, void>::Form<PosUnitT, SizeUnitT>& (&FuncT)(const typename UI::Designer<PosUnitT, SizeUnitT>::Toolbox::Component&);
+            struct Hack : public Designer
+            {
+                static void Call(FuncT value)
+                {
+                    detail::Global(Designer::CreateForm).Get<Designer::CreateForm>() = value;
+                }
+            };
+            Hack::Call(value);
         }
 
-        template<UI::Designer<void, void>::Form::Component::Tag, class PosUnitT, class SizeUnitT>
-        void Override(typename UI::Designer<PosUnitT, SizeUnitT>::Form::Component& (&value)(const typename UI::Designer<PosUnitT, SizeUnitT>::Toolbox::Component&))
+        template<UI::Designer<void, void>::Component<void, void>::Tag, class PosUnitT, class SizeUnitT>
+        void Override(typename UI::Designer<void, void>::Component<PosUnitT, SizeUnitT>& (&value)(const typename UI::Designer<PosUnitT, SizeUnitT>::Toolbox::Component&))
         {
-            typedef typename UI::Designer<PosUnitT, SizeUnitT>::Form DesignerForm;
-            detail::Global(DesignerForm::CreateComponent).Get<DesignerForm::CreateComponent>() = value;
+            typedef UI::Designer<PosUnitT, SizeUnitT> Designer;
+            typedef typename Designer::Form Form;
+            typedef
+            typename UI::Designer<void, void>::Component<PosUnitT, SizeUnitT>& (&FuncT)(const typename UI::Designer<PosUnitT, SizeUnitT>::Toolbox::Component&);
+            struct Hack : public Form
+            {
+                static void Call(FuncT value)
+                {
+                    detail::Global(Form::CreateComponent).Get<Form::CreateComponent>() = value;
+                }
+            };
+            Hack::Call(value);
         }
     }
 
