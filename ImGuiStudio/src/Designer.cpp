@@ -4,12 +4,29 @@
 
 namespace ImGui
 {
-    void DrawBorder(ImVec2 obj_pos, ImVec2 obj_size, float distance_thickness = 5.f, ImU32 col = IM_COL32(255, 255, 0, 255))
+    void DrawBorder(ImVec2 obj_pos, ImVec2 obj_size, float distance_thickness = 5.f, ImU32 col = IM_COL32(0, 130, 216, 255))
     {
         ImVec2 vMin = { ImGui::GetWindowPos().x + obj_pos.x - distance_thickness, ImGui::GetWindowPos().y + obj_pos.y - distance_thickness };
         ImVec2 vMax = { vMin.x + obj_size.x + (distance_thickness * 2.f), vMin.y + obj_size.y + (distance_thickness * 2.f) };
         //ImGui::GetForegroundDrawList( )->AddRect( vMin, vMax, col ); //will draw on top of everything 
         ImGui::GetWindowDrawList()->AddRect(vMin, vMax, col, 0.f, 0, 0.01f);
+    }
+
+    bool SelectionRect(ImVec2* start_pos, ImVec2* end_pos, ImGuiMouseButton mouse_button = ImGuiMouseButton_Left)
+    {
+        IM_ASSERT(start_pos != NULL);
+        IM_ASSERT(end_pos != NULL);
+
+        if (ImGui::IsMouseClicked(mouse_button))
+            *start_pos = ImGui::GetMousePos();
+        if (ImGui::IsMouseDown(mouse_button))
+        {
+            *end_pos = ImGui::GetMousePos();
+            ImDrawList* draw_list = ImGui::GetForegroundDrawList(); //ImGui::GetWindowDrawList();
+            draw_list->AddRect(*start_pos, *end_pos, ImGui::GetColorU32(IM_COL32(0, 130, 216, 255)));   // Border
+            draw_list->AddRectFilled(*start_pos, *end_pos, ImGui::GetColorU32(IM_COL32(0, 130, 216, 50)));    // Background
+        }
+        return ImGui::IsMouseReleased(mouse_button);
     }
 }
 
@@ -28,13 +45,11 @@ namespace ImGuiStudio
             {
                 Window::Begin();
 
-                selection_in_progress = (!ImGui::IsMouseReleased(ImGuiMouseButton_Left));
+                selection_in_progress = false;
 
-                if (selection_in_progress)
-                {
-                    selection_end = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left);
-                    ImGui::DrawBorder(selection_start, selection_end);
-                }
+                if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows))
+                    selection_in_progress =
+                        !ImGui::SelectionRect(&selection_start, &selection_end);
             }
         };
     }
@@ -126,11 +141,6 @@ void ImGuiStudio::Designer::step()
             }
 
             
-        }
-
-        if (ImGui::IsMouseDown(ImGuiMouseButton_Left) && !ImGui::IsMouseDragging(ImGuiMouseButton_Left))
-        {
-            internal->window.selection_start = ImVec2(ImGui::GetMousePos().x - widget().x(), ImGui::GetMousePos().y - widget().y());
         }
 
 
