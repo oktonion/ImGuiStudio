@@ -72,6 +72,20 @@ namespace GIDE
                     return result;
                 }
 
+                // rect
+                virtual Position2DUnit left() const {
+                    return x();
+                }
+                virtual Position2DUnit right() const {
+                    return x() + width();
+                }
+                virtual Position2DUnit top() const {
+                    return y();
+                }
+                virtual Position2DUnit bottom() const {
+                    return y() + height();
+                }
+
                 // name
                 virtual std::string name() const { return ""; }
 
@@ -155,6 +169,17 @@ namespace GIDE
                 // getters
                 using Widget::size;
                 using Widget::position;
+                Position2D global_position() const
+                {
+                    Position2D parent_global_position = {0., 0.};
+                    if (parent())
+                        parent_global_position = parent()->global_position();
+
+                    Position2D result = { parent_global_position.x + x(), parent_global_position.y + y() };
+
+                    return result;
+                }
+
                 // parent
                 virtual Parent* parent() const { return NULL; }
                 using Widget::name;
