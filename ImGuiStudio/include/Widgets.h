@@ -290,6 +290,16 @@ namespace ImGuiStudio
         {
             std::vector<Child*> children;
 
+            struct
+            {
+                Position2D global_position;
+            } state;
+
+            Position2D global_position() const override
+            {
+                return state.global_position;
+            }
+
             void AddChild(Child& value, std::size_t tab_order = 0)
             {
                 if (&value == this)
@@ -325,7 +335,11 @@ namespace ImGuiStudio
                     | ImGuiWindowFlags_NoCollapse
                 );
 
-                ImGui::GetWindowPos();
+                {
+                    state.global_position = Basic <Widgets::Window>::global_position();
+                    state.global_position.x += ImGui::GetWindowContentRegionMin().x;
+                    state.global_position.y += ImGui::GetWindowContentRegionMin().y;
+                }
 
                 auto pos = ImGui::GetWindowPos();
                 auto pos_w = position();

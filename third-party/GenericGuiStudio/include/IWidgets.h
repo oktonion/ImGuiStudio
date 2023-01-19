@@ -169,7 +169,7 @@ namespace GIDE
                 // getters
                 using Widget::size;
                 using Widget::position;
-                Position2D global_position() const
+                virtual Position2D global_position() const
                 {
                     Position2D parent_global_position = {0., 0.};
                     if (parent())

@@ -4,7 +4,12 @@
 
 namespace ImGui
 {
-    void DrawBorder(ImVec2 obj_pos, ImVec2 obj_size, float distance_thickness = 5.f, ImU32 col = IM_COL32(0, 130, 216, 255))
+    ImColor GetSelectionColor()
+    {
+        return ImGui::GetStyle().Colors[ImGuiCol_Button];
+    }
+
+    void DrawBorder(ImVec2 obj_pos, ImVec2 obj_size, float distance_thickness = 5.f, ImU32 col = GetColorU32(GetSelectionColor().Value))
     {
         ImVec2 vMin = { ImGui::GetWindowPos().x + obj_pos.x - distance_thickness, ImGui::GetWindowPos().y + obj_pos.y - distance_thickness };
         ImVec2 vMax = { vMin.x + obj_size.x + (distance_thickness * 2.f), vMin.y + obj_size.y + (distance_thickness * 2.f) };
@@ -23,8 +28,10 @@ namespace ImGui
         {
             *end_pos = ImGui::GetMousePos();
             ImDrawList* draw_list = ImGui::GetForegroundDrawList(); //ImGui::GetWindowDrawList();
-            draw_list->AddRect(*start_pos, *end_pos, ImGui::GetColorU32(IM_COL32(0, 130, 216, 255)));   // Border
-            draw_list->AddRectFilled(*start_pos, *end_pos, ImGui::GetColorU32(IM_COL32(0, 130, 216, 50)));    // Background
+            ImColor color = GetSelectionColor();
+            auto R = 255 * color.Value.x; auto G = 255 * color.Value.y; auto B = 255 * color.Value.z; auto A = 255 * color.Value.z;
+            draw_list->AddRect(*start_pos, *end_pos, ImGui::GetColorU32(IM_COL32(R, G, B, 255)));   // Border
+            draw_list->AddRectFilled(*start_pos, *end_pos, ImGui::GetColorU32(IM_COL32(R, G, B, 50)));    // Background
         }
         return ImGui::IsMouseReleased(mouse_button);
     }
@@ -48,8 +55,24 @@ namespace ImGuiStudio
                 selection_in_progress = false;
 
                 if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows))
+                {
+                    auto window_pos = global_position();
+
+                    selection_start.x += window_pos.x;
+                    selection_start.y += window_pos.y;
+
+                    selection_end.x += window_pos.x;
+                    selection_end.y += window_pos.y;
+
                     selection_in_progress =
                         !ImGui::SelectionRect(&selection_start, &selection_end);
+
+                    selection_start.x -= window_pos.x;
+                    selection_start.y -= window_pos.y;
+
+                    selection_end.x -= window_pos.x;
+                    selection_end.y -= window_pos.y;
+                }
             }
         };
     }
@@ -148,10 +171,38 @@ void ImGuiStudio::Designer::step()
         {
             for (auto component : components)
             {
-                if (component->widget().x() > internal->window.selection_end.x && component->widget().y() > internal->window.selection_end.y)
+                bool intersects = false;
                 {
-                    component->widget().click();
+                    struct Rect
+                    {
+                        Position2DUnit left, right, top, bottom;
+                    };
+                    
+                    auto wpos = component->widget().global_position();
+                    auto window_pos = widget().global_position();
+                    auto wsize = component->widget().size();
+
+                    wpos.x -= window_pos.x; wpos.y -= window_pos.y;
+                    Rect wrect{ wpos.x, wpos.x + wsize.width, wpos.y, wpos.y + wsize.height };
+                    Rect selrect{ internal->window.selection_start.x, internal->window.selection_end.x, internal->window.selection_start.y, internal->window.selection_end.y };
+
+                    if (selrect.left > selrect.right)
+                        std::swap(selrect.left, selrect.right);
+                    if (selrect.top > selrect.bottom)
+                        std::swap(selrect.top, selrect.bottom);
+
+                    intersects =
+                        (wrect.left < selrect.right&& wrect.right > selrect.left &&
+                            wrect.top < selrect.bottom&& wrect.bottom > selrect.top);
+
+
+                   ImGui::Text("wrect: %f:%f:%f:%f\n selrect: %f:%f:%f:%f",
+                       wrect.left,  wrect.top, wrect.right, wrect.bottom,
+                       selrect.left,  selrect.top, selrect.right, selrect.bottom
+                   );
                 }
+
+                component->widget().select(intersects);
             }
         }
 
@@ -196,7 +247,18 @@ namespace ImGuiStudio
         {
             void Begin()
             {
-                Button::Begin();
+                {
+                    auto pos = ImGui::GetCursorPos();
+                    auto pos_w = position();
+                    ImGui::SetCursorPosX(x()); ImGui::SetCursorPosY(y());
+                    position(pos.x, pos.y);
+
+                    auto label = caption(); if (label.empty()) label = name();
+                    ImGui::Text(label.c_str());
+
+
+                    size(ImGui::GetItemRectSize().x, ImGui::GetItemRectSize().y);
+                }
                 if (selected())
                     ImGui::DrawBorder({ x(), y() }, { width(), height() });
             }
