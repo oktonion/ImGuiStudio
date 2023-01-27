@@ -162,14 +162,14 @@ namespace ImGuiStudio
             {
                 // remove from old parent
                 {
-                    IBasic* widget = dynamic_cast<IBasic*>(parent());
+                    ImGuiStudio::Widgets::IBasic* widget = dynamic_cast<ImGuiStudio::Widgets::IBasic*>(parent());
                     if (widget)
                         widget->RemoveChild(*this);
                 }
 
                 // add to new parent
                 {
-                    IBasic* widget = dynamic_cast<IBasic*>(&value);
+                    ImGuiStudio::Widgets::IBasic* widget = dynamic_cast<ImGuiStudio::Widgets::IBasic*>(&value);
                     widget->AddChild(*this);
                     BaseT::parent(value);
                 }

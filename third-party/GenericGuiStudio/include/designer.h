@@ -383,7 +383,7 @@ namespace GIDE
 namespace GIDE
 {
     template<class PosUnitT, class SizeUnitT>
-    void UI::Designer<PosUnitT, SizeUnitT>::log(const std::string& message, System::Log::Severity severity)
+    void GIDE::UI::Designer<PosUnitT, SizeUnitT>::log(const std::string& message, System::Log::Severity severity)
     {
         using namespace System;
 
@@ -423,7 +423,7 @@ namespace GIDE
     }
 
     template<class PosUnitT, class SizeUnitT>
-    void UI::Designer<PosUnitT, SizeUnitT>::init()
+    void GIDE::UI::Designer<PosUnitT, SizeUnitT>::init()
     {
         widget().name("Designer");
         toolbox().widget().name("Toolbox");
@@ -443,7 +443,7 @@ namespace GIDE
     }
 
     template<class PosUnitT, class SizeUnitT>
-    void UI::Designer<PosUnitT, SizeUnitT>::step()
+    void GIDE::UI::Designer<PosUnitT, SizeUnitT>::step()
     {
         toolbox().step(form());
     }
@@ -502,12 +502,12 @@ namespace GIDE
             detail::Global(IEdit::Create).Get<IEdit::Create>() = value;
         }
 
-        template<UI::Designer<void, void>::Form<void, void>::Tag, class PosUnitT, class SizeUnitT>
-        void Override(typename UI::Designer<void, void>::Form<PosUnitT, SizeUnitT>& (&value)(const typename UI::Designer<PosUnitT, SizeUnitT>::Toolbox::Component&))
+        template<GIDE::UI::Designer<void, void>::Form<void, void>::Tag, class PosUnitT, class SizeUnitT>
+        void Override(typename GIDE::UI::Designer<void, void>::Form<PosUnitT, SizeUnitT>& (&value)(const typename GIDE::UI::Designer<PosUnitT, SizeUnitT>::Toolbox::Component&))
         {
-            typedef UI::Designer<PosUnitT, SizeUnitT> Designer;
+            typedef GIDE::UI::Designer<PosUnitT, SizeUnitT> Designer;
             typedef
-            typename UI::Designer<void, void>::Form<PosUnitT, SizeUnitT>& (&FuncT)(const typename UI::Designer<PosUnitT, SizeUnitT>::Toolbox::Component&);
+            typename GIDE::UI::Designer<void, void>::Form<PosUnitT, SizeUnitT>& (&FuncT)(const typename GIDE::UI::Designer<PosUnitT, SizeUnitT>::Toolbox::Component&);
             struct Hack : public Designer
             {
                 static void Call(FuncT value)
@@ -518,13 +518,13 @@ namespace GIDE
             Hack::Call(value);
         }
 
-        template<UI::Designer<void, void>::Component<void, void>::Tag, class PosUnitT, class SizeUnitT>
-        void Override(typename UI::Designer<void, void>::Component<PosUnitT, SizeUnitT>& (&value)(const typename UI::Designer<PosUnitT, SizeUnitT>::Toolbox::Component&))
+        template<GIDE::UI::Designer<void, void>::Component<void, void>::Tag, class PosUnitT, class SizeUnitT>
+        void Override(typename GIDE::UI::Designer<void, void>::Component<PosUnitT, SizeUnitT>& (&value)(const typename GIDE::UI::Designer<PosUnitT, SizeUnitT>::Toolbox::Component&))
         {
-            typedef UI::Designer<PosUnitT, SizeUnitT> Designer;
+            typedef GIDE::UI::Designer<PosUnitT, SizeUnitT> Designer;
             typedef typename Designer::Form Form;
             typedef
-            typename UI::Designer<void, void>::Component<PosUnitT, SizeUnitT>& (&FuncT)(const typename UI::Designer<PosUnitT, SizeUnitT>::Toolbox::Component&);
+            typename GIDE::UI::Designer<void, void>::Component<PosUnitT, SizeUnitT>& (&FuncT)(const typename GIDE::UI::Designer<PosUnitT, SizeUnitT>::Toolbox::Component&);
             struct Hack : public Form
             {
                 static void Call(FuncT value)
