@@ -70,8 +70,6 @@ namespace ImGuiStudio
                             if (ImGui::GetMousePos().x < window_right && ImGui::GetMousePos().y < window_bottom)
                                 selection_in_progress =
                                 !ImGui::SelectionRect(&selection_start, &selection_end);
-                            else
-                                selection_in_progress = false;
                     }
 
                     selection_start.x -= window_pos.x;
@@ -79,6 +77,12 @@ namespace ImGuiStudio
 
                     selection_end.x -= window_pos.x;
                     selection_end.y -= window_pos.y;
+                }
+
+                else
+                {
+                    selection_start = {};
+                    selection_end = selection_start;
                 }
             }
         };
