@@ -506,7 +506,7 @@ int main(int argc, char** argv)
     }
     catch (...)
     {
-        std::cout << "Dear ImGui Studio application has experienced unexpected exception" << std::endl;
+        std::cout << "Dear ImGui Studio application has experienced unknown exception" << std::endl;
     }
     ImGuiStudioBackend::Stop();
     return 0;
