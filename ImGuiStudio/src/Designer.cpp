@@ -64,8 +64,15 @@ namespace ImGuiStudio
                     selection_end.x += window_pos.x;
                     selection_end.y += window_pos.y;
 
-                    selection_in_progress =
-                        !ImGui::SelectionRect(&selection_start, &selection_end);
+                    {
+                        auto window_left = window_pos.x, window_top = window_pos.y, window_right = window_left + width(), window_bottom = window_top + height();
+                        if (ImGui::GetMousePos().x > window_left && ImGui::GetMousePos().y > window_top)
+                            if (ImGui::GetMousePos().x < window_right && ImGui::GetMousePos().y < window_bottom)
+                                selection_in_progress =
+                                !ImGui::SelectionRect(&selection_start, &selection_end);
+                            else
+                                selection_in_progress = false;
+                    }
 
                     selection_start.x -= window_pos.x;
                     selection_start.y -= window_pos.y;
