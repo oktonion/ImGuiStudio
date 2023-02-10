@@ -103,27 +103,7 @@ struct ImGuiStudio::Designer::impl
 ImGuiStudio::Designer::Designer()
     : internal(new impl())
 {
-    struct lambdas
-    {
-        static GIDE::System::Display::SizeType DisplaySize()
-        {
-            typedef GIDE::System::Display::SizeType result_type;
 
-            result_type result = {
-                result_type::Unit(ImGui::GetIO().DisplaySize.x),
-                result_type::Unit(ImGui::GetIO().DisplaySize.y)
-            };
-            if (result.height < 10 || result.width < 10 || result.height > 9999 || result.width > 9999)
-            {
-                result.height = 720, result.width = 240;
-            }
-            return result;
-        }
-    };
-
-    GIDE::RTTI::Override<
-        static_cast<decltype(lambdas::DisplaySize)&>(GIDE::System::Display::Size)
-    >(lambdas::DisplaySize);
 }
 
 
@@ -290,7 +270,7 @@ namespace ImGuiStudio
 
         static DesignerComponent& Create(const ToolboxComponent& tbcomp)
         {
-            static std::map<std::string, std::vector<DesignerComponent>/**/> components;
+            static std::map<std::string, std::list<DesignerComponent>/**/> components;
             components[tbcomp.ID()].resize(components[tbcomp.ID()].size() + 1);
             DesignerComponent& result = components[tbcomp.ID()].back();
             result.comp_type = &tbcomp;
