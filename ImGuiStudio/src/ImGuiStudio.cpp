@@ -178,39 +178,65 @@ namespace ImGuiStudio
 
 void ImGuiStudio::Init()
 {
-    struct lambdas
     {
-        static UI::Widgets::IWindow& CreateWindow()
+        struct lambdas
         {
-            return ImGuiStudio::CreateWindow(ImGuiStudio::MainWindow());
-        }
+            static GIDE::System::Display::SizeType DisplaySize()
+            {
+                typedef GIDE::System::Display::SizeType result_type;
 
-        static UI::Widgets::ISubWindow& CreateSubWindow(UI::Widgets::IWindow& parent)
+                result_type result = {
+                    result_type::Unit(ImGui::GetIO().DisplaySize.x),
+                    result_type::Unit(ImGui::GetIO().DisplaySize.y)
+                };
+                if (result.height < 10 || result.width < 10 || result.height > 9999 || result.width > 9999)
+                {
+                    result.height = 720, result.width = 240;
+                }
+                return result;
+            }
+        };
+
+        GIDE::RTTI::Override<
+            static_cast<decltype(lambdas::DisplaySize)&>(GIDE::System::Display::Size)
+        >(lambdas::DisplaySize);
+    }
+
+    {
+        struct lambdas
         {
-            return ImGuiStudio::CreateSubWindow(dynamic_cast<ImGuiStudio::Widgets::Window&>(parent));
-        }
+            static UI::Widgets::IWindow& CreateWindow()
+            {
+                return ImGuiStudio::CreateWindow(ImGuiStudio::MainWindow());
+            }
 
-        static UI::Widgets::IButton& CreateButton()
-        {
-            return ImGuiStudio::CreateButton(ImGuiStudio::MainWindow());
-        }
+            static UI::Widgets::ISubWindow& CreateSubWindow(UI::Widgets::IWindow& parent)
+            {
+                return ImGuiStudio::CreateSubWindow(dynamic_cast<ImGuiStudio::Widgets::Window&>(parent));
+            }
 
-        static UI::Widgets::ICollapsible& CreateCollapsible()
-        {
-            return ImGuiStudio::CreateCollapsible(ImGuiStudio::MainWindow());
-        }
+            static UI::Widgets::IButton& CreateButton()
+            {
+                return ImGuiStudio::CreateButton(ImGuiStudio::MainWindow());
+            }
 
-        static UI::Widgets::IEdit<float>& CreateFloatEdit()
-        {
-            return ImGuiStudio::CreateEdit<float>(ImGuiStudio::MainWindow());
-        }
-    };
+            static UI::Widgets::ICollapsible& CreateCollapsible()
+            {
+                return ImGuiStudio::CreateCollapsible(ImGuiStudio::MainWindow());
+            }
 
-    GIDE::RTTI::Override<GIDE::UI::Widgets::Window::Create>(lambdas::CreateWindow);
-    GIDE::RTTI::Override<GIDE::UI::Widgets::SubWindow::Create>(lambdas::CreateSubWindow);
-    GIDE::RTTI::Override<GIDE::UI::Widgets::Button::Create>(lambdas::CreateButton);
-    GIDE::RTTI::Override<GIDE::UI::Widgets::Collapsible::Create>(lambdas::CreateCollapsible);
-    GIDE::RTTI::Override<GIDE::UI::Widgets::Edit<float>::Create>(lambdas::CreateFloatEdit);
+            static UI::Widgets::IEdit<float>& CreateFloatEdit()
+            {
+                return ImGuiStudio::CreateEdit<float>(ImGuiStudio::MainWindow());
+            }
+        };
+
+        GIDE::RTTI::Override<GIDE::UI::Widgets::Window::Create>(lambdas::CreateWindow);
+        GIDE::RTTI::Override<GIDE::UI::Widgets::SubWindow::Create>(lambdas::CreateSubWindow);
+        GIDE::RTTI::Override<GIDE::UI::Widgets::Button::Create>(lambdas::CreateButton);
+        GIDE::RTTI::Override<GIDE::UI::Widgets::Collapsible::Create>(lambdas::CreateCollapsible);
+        GIDE::RTTI::Override<GIDE::UI::Widgets::Edit<float>::Create>(lambdas::CreateFloatEdit);
+    }
 
     Designer::Init();
     Properties::Init();
