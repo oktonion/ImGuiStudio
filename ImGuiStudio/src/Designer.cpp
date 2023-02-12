@@ -52,9 +52,15 @@ namespace ImGuiStudio
             {
                 Window::Begin();
 
+                const bool can_select =
+                    selection_in_progress ||
+                    selection_start.x == selection_end.x;
                 selection_in_progress = false;
+                
 
-                if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows))
+
+                if (can_select &&
+                    ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows))
                 {
                     auto window_pos = global_position();
 
@@ -69,7 +75,7 @@ namespace ImGuiStudio
                         if (ImGui::GetMousePos().x > window_left && ImGui::GetMousePos().y > window_top)
                             if (ImGui::GetMousePos().x < window_right && ImGui::GetMousePos().y < window_bottom)
                                 selection_in_progress =
-                                !ImGui::SelectionRect(&selection_start, &selection_end);
+                                    !ImGui::SelectionRect(&selection_start, &selection_end);
                     }
 
                     selection_start.x -= window_pos.x;
@@ -197,7 +203,7 @@ void ImGuiStudio::Designer::step()
             }
         }
 
-        if (drag_delta.x || drag_delta.y)
+        else if (drag_delta.x || drag_delta.y)
         {
 
             bool moving_widgets = !mouse_moving;
