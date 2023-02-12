@@ -86,7 +86,7 @@ namespace GIDE
             typedef GIDE::UI::Widgets::IBasic<PosUnitT, SizeUnitT> Widget;
 
             virtual bool is_container() const { return type().is_containter(); }
-            virtual bool is_selected() const { return widget().clicked(); }
+            virtual bool is_selected() const { return widget().selected(); }
             virtual Widget& widget() = 0;
             virtual const Widget& widget() const = 0;
 
