@@ -32,14 +32,23 @@ namespace ImGuiStudio
 
     static Widgets::SubWindow& CreateSubWindow(Widgets::Window& parent);
 
-    static Widgets::MainWindow& MainWindow();
+    namespace MainWindow
+    {
+        static Widgets::MainWindow& Instance();
+    }
 }
 
+void ImGuiStudio::Step()
+{
+    Designer().step();
+}
 
+void ImGuiStudio::Free()
+{
+    ImGuiStudio::Designer::Free();
+}
 
-
-
-bool ImGuiStudio::Begin(const ImVec2 &size, bool *is_open)
+bool ImGuiStudio::MainWindow::Begin(const ImVec2 &size, bool *is_open)
 {
     ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 
@@ -169,9 +178,12 @@ namespace ImGuiStudio
         return result;
     }
 
-    static Widgets::MainWindow& MainWindow() {
-        static Widgets::MainWindow instance;
-        return instance;
+    namespace MainWindow
+    {
+        static Widgets::MainWindow& Instance() {
+            static Widgets::MainWindow instance;
+            return instance;
+        }
     }
 }
 
@@ -207,7 +219,7 @@ void ImGuiStudio::Init()
         {
             static UI::Widgets::IWindow& CreateWindow()
             {
-                return ImGuiStudio::CreateWindow(ImGuiStudio::MainWindow());
+                return ImGuiStudio::CreateWindow(ImGuiStudio::MainWindow::Instance());
             }
 
             static UI::Widgets::ISubWindow& CreateSubWindow(UI::Widgets::IWindow& parent)
@@ -217,17 +229,17 @@ void ImGuiStudio::Init()
 
             static UI::Widgets::IButton& CreateButton()
             {
-                return ImGuiStudio::CreateButton(ImGuiStudio::MainWindow());
+                return ImGuiStudio::CreateButton(ImGuiStudio::MainWindow::Instance());
             }
 
             static UI::Widgets::ICollapsible& CreateCollapsible()
             {
-                return ImGuiStudio::CreateCollapsible(ImGuiStudio::MainWindow());
+                return ImGuiStudio::CreateCollapsible(ImGuiStudio::MainWindow::Instance());
             }
 
             static UI::Widgets::IEdit<float>& CreateFloatEdit()
             {
-                return ImGuiStudio::CreateEdit<float>(ImGuiStudio::MainWindow());
+                return ImGuiStudio::CreateEdit<float>(ImGuiStudio::MainWindow::Instance());
             }
         };
 
@@ -241,10 +253,10 @@ void ImGuiStudio::Init()
     Designer::Init();
     Properties::Init();
 
-    Designer().widget().parent(MainWindow());
+    Designer().widget().parent(MainWindow::Instance());
 }
 
-bool ImGuiStudio::Begin(bool* is_open)
+bool ImGuiStudio::MainWindow::Begin(bool* is_open)
 {
     bool result = ImGui::Begin("Dear ImGui Studio", is_open,
         0
@@ -255,18 +267,18 @@ bool ImGuiStudio::Begin(bool* is_open)
         | ImGuiWindowFlags_NoCollapse
     );
 
-    MainWindow().Begin();
+    MainWindow::Instance().Begin();
 
     ImGuiStudio::Properties::Begin();
 
     return result;
 }
 
-void ImGuiStudio::End()
+void ImGuiStudio::MainWindow::End()
 {
     ImGuiStudio::Properties::End();
 
-    MainWindow().End();
+    MainWindow::Instance().End();
 
     ImGui::End();
 }

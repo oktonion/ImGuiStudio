@@ -17,6 +17,7 @@
 #include <string>
 #include <map>
 #include <set>
+#include <memory>
 
 namespace GIDE
 {
@@ -24,20 +25,20 @@ namespace GIDE
     {
         namespace Widgets
         {
-            struct Basic       { enum Tag { Create }; };
-            struct Collapsible { enum Tag { Create }; };
-            struct Button      { enum Tag { Create }; };
-            struct Window      { enum Tag { Create }; };
-            struct SubWindow   { enum Tag { Create }; };
+            struct Basic       { enum Tag { Create, Free }; };
+            struct Collapsible { enum Tag { Create, Free }; };
+            struct Button      { enum Tag { Create, Free }; };
+            struct Window      { enum Tag { Create, Free }; };
+            struct SubWindow   { enum Tag { Create, Free }; };
 
             template<class ValueT>
             struct Edit;
             template<>
-            struct Edit<void> { enum Tag { Create }; };
+            struct Edit<void> { enum Tag { Create, Free }; };
             template<class ValueT>
             struct Edit : Edit<void> {};
 
-            struct Label { enum Tag { Create }; };
+            struct Label { enum Tag { Create, Free }; };
 
             using Implement::Widgets::IBasic;
             using Implement::Widgets::ICollapsible;
@@ -59,18 +60,26 @@ namespace GIDE
             struct Component;
 
             template<class PosUnitT, class SizeUnitT>
+            struct Container;
+
+            template<class PosUnitT, class SizeUnitT>
             struct Form;
 
         };
 
         template<>
         struct Designer<void, void>::Form<void, void> {
-            enum Tag {Create};
+            enum Tag { Create, Free };
         };
 
         template<>
         struct Designer<void, void>::Component<void, void> {
-            enum Tag { Create };
+            enum Tag { Create, Free };
+        };
+
+        template<>
+        struct Designer<void, void>::Container<void, void> {
+            enum Tag { Create, Free };
         };
 
         template<class PosUnitT, class SizeUnitT>
@@ -85,14 +94,44 @@ namespace GIDE
 
             typedef GIDE::UI::Widgets::IBasic<PosUnitT, SizeUnitT> Widget;
 
-            virtual bool is_container() const { return type().is_containter(); }
-            virtual bool is_selected() const { return widget().selected(); }
+            virtual bool selected() const { return widget().selected(); }
             virtual Widget& widget() = 0;
             virtual const Widget& widget() const = 0;
 
             virtual const ToolboxComponent& type() const = 0;
 
             virtual ~Component() {}
+
+            static void Free(Component& that)
+            {
+                return detail::Global(Implement::Widgets::Free<Component>).Get<Free>()(that);
+            }
+
+            virtual void free()
+            {
+                return Free(*this);
+            }
+        };
+
+        template<class PosUnitT, class SizeUnitT>
+        struct Designer<void, void>::Container
+            : Designer<void, void>::Container<void, void>
+        {
+
+            typedef PosUnitT Position2DUnit;
+            typedef SizeUnitT SizeUnit;
+
+            typedef typename Toolbox::Component ToolboxComponent;
+
+            typedef GIDE::UI::Widgets::IBasic<PosUnitT, SizeUnitT> Widget;
+
+            virtual bool selected() const { return widget().selected(); }
+            virtual Widget& widget() = 0;
+            virtual const Widget& widget() const = 0;
+
+            virtual const ToolboxComponent& type() const = 0;
+
+            virtual ~Container() {}
         };
 
         template<class PosUnitT, class SizeUnitT>
@@ -108,6 +147,15 @@ namespace GIDE
             typedef Designer<void, void>::Component<PosUnitT, SizeUnitT> Component;
 
             typedef Designer<PosUnitT, SizeUnitT> Designer;
+            typedef std::shared_ptr<Component> ComponentPtr;
+            typedef std::list<ComponentPtr> ComponentCollection;
+
+            struct ComponentDeleter {
+                void operator()(Component* that) const
+                {
+                    return that->free();
+                }
+            };
 
             virtual void drop(const ToolboxComponent& toolbox_component, Component& other_component)
             {
@@ -125,10 +173,14 @@ namespace GIDE
                 if (!component.widget().parent())
                     GIDE::System::Abort("widget placing on form '" + widget().name() + "' for '" + component.widget().name() + "' failed: cannot set parent", GIDE::System::Log::Fatal);
 
-                dropped_components.push_back(&component);
+                {
+
+                    ComponentPtr ptr(&component, ComponentDeleter());
+                    dropped_components.push_back(ptr);
+                }
             }
 
-            void drop(const ToolboxComponent& toolbox_component)
+            Component& drop(const ToolboxComponent& toolbox_component)
             {
                 Component& component = CreateComponent(toolbox_component);
 
@@ -137,7 +189,12 @@ namespace GIDE
                 if (!component.widget().parent())
                     GIDE::System::Abort("widget placing on form '" + widget().name() + "' for '" + component.widget().name() + "' failed: cannot set parent", GIDE::System::Log::Fatal);
 
-                dropped_components.push_back(&component);
+                {
+                    ComponentPtr ptr(&component, ComponentDeleter());
+                    dropped_components.push_back(ptr);
+                }
+
+                return component;
             }
 
             void remove(const std::string& name)
@@ -146,7 +203,6 @@ namespace GIDE
                 {
                     if ((*it)->name() == name)
                     {
-                        delete (*it);
                         dropped_components.erase(it);
                         return;
                     }
@@ -155,12 +211,16 @@ namespace GIDE
                 GIDE::System::Print("component remove failed: cannot find '" + name + "' component on form '" + widget().name());
             }
 
-            const std::list<Component*>& components() const { return dropped_components; }
+            void clear() {
+                dropped_components.clear();
+            }
+
+            const ComponentCollection& components() const { return dropped_components; }
 
             virtual Widget& widget() const = 0;
 
         protected:
-            std::list<Component*> dropped_components;
+            ComponentCollection dropped_components;
 
             static Component& CreateComponent(const ToolboxComponent& toolbox_component)
             {

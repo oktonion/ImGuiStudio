@@ -22,6 +22,7 @@ namespace ImGuiStudio
         void step() override;
         static void Init();
         static bool Opened();
+        static void Free();
 
 
     private:

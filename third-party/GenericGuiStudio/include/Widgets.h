@@ -548,6 +548,12 @@ namespace GIDE
         };
 
         template<class PosUnitT, class SizeUnitT>
+        struct TypeInfo<Implement::Widgets::SubWindow<PosUnitT, SizeUnitT>/**/>
+        {
+            static std::string Name() { return "SubWindow"; }
+        };
+
+        template<class PosUnitT, class SizeUnitT>
         struct TypeInfo<Implement::Widgets::Label<PosUnitT, SizeUnitT>/**/>
         {
             static std::string Name() { return "Label"; }

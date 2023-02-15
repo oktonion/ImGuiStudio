@@ -424,7 +424,7 @@ namespace ImGuiStudioBackend
 
             
 
-            ImGuiStudio::Begin(&opened);
+            ImGuiStudio::MainWindow::Begin(&opened);
             
             auto winSize = ImGui::GetWindowSize();
             auto winPos = ImGui::GetWindowPos();
@@ -448,7 +448,7 @@ namespace ImGuiStudioBackend
 
             ImGuiStudio::Designer().step();
             
-            ImGuiStudio::End();
+            ImGuiStudio::MainWindow::End();
 
             ImGui::Render();
 
@@ -476,6 +476,9 @@ namespace ImGuiStudioBackend
 
     void Stop() 
     {
+
+        ImGuiStudio::Free();
+
 #ifdef _OPENGL2
         ImGui_ImplOpenGL2_Shutdown();
 #else

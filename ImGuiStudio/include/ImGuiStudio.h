@@ -112,10 +112,14 @@ namespace ImGuiStudio
     struct ID; // unique ID type for serialization purpose
 
     void Init();
+    void Step();
+    void Free();
 
-    bool Begin(const ImVec2& size, bool* opened = NULL); // create Studio GUI main window
-    bool Begin(bool* opened = NULL); // create Studio GUI main window
-    void End(); // end Studio GUI main window
+    namespace MainWindow {
+        bool Begin(const ImVec2& size, bool* opened = NULL); // create Studio GUI main window
+        bool Begin(bool* opened = NULL); // create Studio GUI main window
+        void End(); // end Studio GUI main window
+    }
 
     UI::Designer& Designer();
     UI::Properties& Properties();

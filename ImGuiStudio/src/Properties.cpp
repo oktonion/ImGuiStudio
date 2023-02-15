@@ -61,7 +61,7 @@ void ImGuiStudio::Properties::Begin()
 
     for (auto component : components)
     {
-        if (component->is_selected())
+        if (component->selected())
         {
 
             Instance().clear();

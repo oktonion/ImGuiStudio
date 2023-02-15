@@ -29,6 +29,15 @@ namespace GIDE
                 std::abort();
             }
 
+            template<class WidgetT>
+            static void Free(WidgetT&)
+            {
+                System::Print(
+                    "GIDE internal: " + RTTI::TypeInfo<WidgetT>::Name() + "::Free is not overridden: "
+                    "make sure to call GIDE::Override<GIDE::Widgets::" + RTTI::TypeInfo<WidgetT>::Name() + "::Free>(MyFreeFunction)"
+                );
+            }
+
             template<class PosUnitT, class SizeUnitT>
             struct IWidget
             {
@@ -109,6 +118,16 @@ namespace GIDE
                 static IBasic& Create()
                 {
                     return detail::Global(Widgets::Create<IBasic>).Get<Create>()();
+                }
+
+                static void Free(IBasic& that)
+                {
+                    return detail::Global(Widgets::Free<IBasic>).Get<Free>()(that);
+                }
+
+                virtual void free()
+                {
+                    return Free(*this);
                 }
 
                 // Widget
@@ -204,6 +223,16 @@ namespace GIDE
                     return detail::Global(Widgets::Create<IWindow>).Get<Create>()();
                 }
 
+                static void Free(IWindow& that)
+                {
+                    return detail::Global(Widgets::Free<IWindow>).Get<Free>()(that);
+                }
+
+                virtual void free()
+                {
+                    return Free(*this);
+                }
+
                 // control
                 virtual void place(Widget& widget)
                 {
@@ -233,6 +262,16 @@ namespace GIDE
                     };
                     return detail::Global(lambdas::Create).Get<Create>()(parent);
                 }
+
+                static void Free(ISubWindow& that)
+                {
+                    return detail::Global(Widgets::Free<ISubWindow>).Get<Free>()(that);
+                }
+
+                virtual void free()
+                {
+                    return Free(*this);
+                }
             };
 
             template<class PosUnitT, class SizeUnitT>
@@ -245,6 +284,16 @@ namespace GIDE
                 static ICollapsible& Create()
                 {
                     return detail::Global(Widgets::Create<ICollapsible>).Get<Create>()();
+                }
+
+                static void Free(ICollapsible& that)
+                {
+                    return detail::Global(Widgets::Free<ICollapsible>).Get<Free>()(that);
+                }
+
+                virtual void free()
+                {
+                    return Free(*this);
                 }
 
                 virtual void collapse(bool hide = true) = 0;
@@ -273,6 +322,16 @@ namespace GIDE
                     return detail::Global(Widgets::Create<IButton>).Get<Create>()();
                 }
 
+                static void Free(IButton& that)
+                {
+                    return detail::Global(Widgets::Free<IButton>).Get<Free>()(that);
+                }
+
+                virtual void free()
+                {
+                    return Free(*this);
+                }
+
                 // control
                 virtual void press() = 0;
                 virtual void release() = 0;
@@ -291,6 +350,16 @@ namespace GIDE
                 static IEdit& Create()
                 {
                     return detail::Global(Widgets::Create<IEdit>).Get<Create>()();
+                }
+
+                static void Free(IEdit& that)
+                {
+                    return detail::Global(Widgets::Free<IEdit>).Get<Free>()(that);
+                }
+
+                virtual void free()
+                {
+                    return Free(*this);
                 }
 
                 // must have:
@@ -318,6 +387,16 @@ namespace GIDE
                 static ILabel& Create()
                 {
                     return detail::Global(Widgets::Create<ILabel>).Get<Create>()();
+                }
+
+                static void Free(ILabel& that)
+                {
+                    return detail::Global(Widgets::Free<ILabel>).Get<Free>()(that);
+                }
+
+                virtual void free()
+                {
+                    return Free(*this);
                 }
             };
         } // namespace Widgets
@@ -348,6 +427,12 @@ namespace GIDE
         struct TypeInfo<Implement::Widgets::IWindow<PosUnitT, SizeUnitT>/**/>
         {
             static std::string Name() { return "IWindow"; }
+        };
+
+        template<class PosUnitT, class SizeUnitT>
+        struct TypeInfo<Implement::Widgets::ISubWindow<PosUnitT, SizeUnitT>/**/>
+        {
+            static std::string Name() { return "ISubWindow"; }
         };
 
         template<class PosUnitT, class SizeUnitT>

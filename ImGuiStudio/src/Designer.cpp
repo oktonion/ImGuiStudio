@@ -47,7 +47,7 @@ namespace ImGuiStudio
         {
             ImVec2 selection_start;
             ImVec2 selection_end;
-            bool selection_in_progress;
+            bool selection_in_progress, components_selected = false;
             void Begin()
             {
                 Window::Begin();
@@ -85,7 +85,7 @@ namespace ImGuiStudio
                     selection_end.y -= window_pos.y;
                 }
 
-                else
+                else if (!components_selected)
                 {
                     selection_start = {};
                     selection_end = selection_start;
@@ -100,6 +100,13 @@ struct ImGuiStudio::Designer::impl
     ImGuiStudio::Designer::Form::Component* active_component;
 
     ImGuiStudio::Widgets::DesignerWindow window;
+
+    static std::unique_ptr<ImGuiStudio::Designer>& DesignerInstance()
+    {
+        static std::unique_ptr<ImGuiStudio::Designer> result(new ImGuiStudio::Designer());
+
+        return result;
+    }
 };
 
 
@@ -114,12 +121,14 @@ ImGuiStudio::Designer::Designer()
 
 
 
-
 ImGuiStudio::Designer& ImGuiStudio::Designer::Instance()
 {
-    static ImGuiStudio::Designer result;
+    return *ImGuiStudio::Designer::impl::DesignerInstance();
+}
 
-    return result;
+void ImGuiStudio::Designer::Free()
+{
+    ImGuiStudio::Designer::impl::DesignerInstance().reset();
 }
 
 bool ImGuiStudio::Designer::Opened()
@@ -166,6 +175,7 @@ void ImGuiStudio::Designer::step()
 
         if (internal->window.selection_in_progress)
         {
+            internal->window.components_selected = false;
             for (auto component : components)
             {
                 bool intersects = false;
@@ -199,6 +209,8 @@ void ImGuiStudio::Designer::step()
                    );
                 }
 
+                if (intersects)
+                    internal->window.components_selected = true;
                 component->widget().select(intersects);
             }
         }
@@ -210,10 +222,10 @@ void ImGuiStudio::Designer::step()
             if (mouse_moving)
                 for (auto component : components)
                 {
-                    if (component->widget().selected())
+                    if (component->widget().selected() && component->widget().clicked())
                     {
-                        internal->active_component = component;
-                        if (component->is_selected())
+                        internal->active_component = component.get();
+                        if (component->selected())
                         {
                             moving_widgets = true;
                             break;
@@ -223,6 +235,8 @@ void ImGuiStudio::Designer::step()
             if (moving_widgets)
                 for (auto component : components)
                 {
+                    if (!component->selected())
+                        continue;
                     auto pos = component->widget().position();
                     pos.x += drag_delta.x;
                     pos.y += drag_delta.y;
@@ -255,6 +269,10 @@ namespace ImGuiStudio
 
 
                     size(ImGui::GetItemRectSize().x, ImGui::GetItemRectSize().y);
+
+                    const bool clicked = ImGui::IsItemClicked();
+                    if (clicked)
+                    click(clicked);
                 }
                 if (selected())
                     ImGui::DrawBorder({ x(), y() }, { width(), height() });
@@ -289,6 +307,9 @@ namespace ImGuiStudio
 
 void ImGuiStudio::Designer::Init()
 {
+    if (!ImGuiStudio::Designer::impl::DesignerInstance())
+        ImGuiStudio::Designer::impl::DesignerInstance().reset(new ImGuiStudio::Designer());
+
     Instance().init();
     Instance().widget().name("Designer");
     Instance().toolbox().widget().name("Toolbox");
