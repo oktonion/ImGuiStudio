@@ -325,7 +325,7 @@ namespace ImGuiStudioBackend
                 GIDE::Toolbox::Component
             {
                 virtual std::string name() const { return "Button"; }
-                virtual std::string group() const { return "Dear ImGui"; }
+                virtual std::string group() const { return "Dear ImGui Buttons"; }
                 virtual std::string description() const { return "button"; }
                 virtual bool is_containter() const { return false; }
                 virtual const Properties& properties() const
@@ -348,7 +348,7 @@ namespace ImGuiStudioBackend
                 GIDE::Toolbox::Component
             {
                 virtual std::string name() const { return "SmallButton"; }
-                virtual std::string group() const { return "Dear ImGui"; }
+                virtual std::string group() const { return "Dear ImGui Buttons"; }
                 virtual std::string description() const { return "button with FramePadding=(0,0) to easily embed within text"; }
                 virtual bool is_containter() const { return false; }
                 virtual const Properties& properties() const
