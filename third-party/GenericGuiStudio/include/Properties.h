@@ -91,10 +91,7 @@ namespace GIDE
                 typedef typename Base::ValueType ValueType;
                 typedef GIDE::Implement::Widgets::IEdit<PosUnitT, SizeUnitT, ValueType> Widget;
 
-                virtual Widget& widget() const {
-                    static Widget& result = Widget::Create();
-                    return result;
-                }
+                virtual Widget& widget() = 0;
             };
 
             virtual std::map<std::string, Group>& groups() {
