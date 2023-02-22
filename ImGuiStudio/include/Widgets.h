@@ -121,7 +121,7 @@ namespace ImGuiStudio
                         return prop_name;
                     }
 
-                    virtual Widget& widget() const
+                    virtual Widget& widget()
                     {
                         static PropertyEdit<GIDE::Properties::FloatingPoint> edit;
                         return edit;
