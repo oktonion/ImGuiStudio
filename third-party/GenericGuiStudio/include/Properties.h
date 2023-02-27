@@ -94,9 +94,9 @@ namespace GIDE
                 typedef std::shared_ptr<Widget> WidgetPtr;
 
                 struct WidgetDeleter {
-                    void operator()(Widget* that) const
+                    void operator()(Widget*) const
                     {
-                        return that->free();
+                        GIDE::System::Abort("Widget has not been freed");
                     }
                 };
 
@@ -120,7 +120,6 @@ namespace GIDE
             protected:
                 static std::map<std::string, WidgetPtr> &Widgets()
                 {
-                    
                     static std::map<std::string, WidgetPtr> widgets;
 
                     return widgets;
@@ -164,6 +163,13 @@ namespace GIDE
 
             virtual void clear()
             {
+                for (auto& gr : groups())
+                {
+                    for (auto& prop : gr.second)
+                    {
+                        prop.second->free();
+                    }
+                }
                 groups().clear();
             }
 
