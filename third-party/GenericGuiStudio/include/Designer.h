@@ -25,20 +25,20 @@ namespace GIDE
     {
         namespace Widgets
         {
-            struct Basic       { enum Tag { Create, Free }; };
-            struct Collapsible { enum Tag { Create, Free }; };
-            struct Button      { enum Tag { Create, Free }; };
-            struct Window      { enum Tag { Create, Free }; };
-            struct SubWindow   { enum Tag { Create, Free }; };
+            struct Basic       { enum Tag { Borrow, Free }; };
+            struct Collapsible { enum Tag { Borrow, Free }; };
+            struct Button      { enum Tag { Borrow, Free }; };
+            struct Window      { enum Tag { Borrow, Free }; };
+            struct SubWindow   { enum Tag { Borrow, Free }; };
 
             template<class ValueT>
             struct Edit;
             template<>
-            struct Edit<void> { enum Tag { Create, Free }; };
+            struct Edit<void> { enum Tag { Borrow, Free }; };
             template<class ValueT>
             struct Edit : Edit<void> {};
 
-            struct Label { enum Tag { Create, Free }; };
+            struct Label { enum Tag { Borrow, Free }; };
 
             using Implement::Widgets::IBasic;
             using Implement::Widgets::ICollapsible;
@@ -69,17 +69,17 @@ namespace GIDE
 
         template<>
         struct Designer<void, void>::Form<void, void> {
-            enum Tag { Create, Free };
+            enum Tag { Borrow, Free };
         };
 
         template<>
         struct Designer<void, void>::Component<void, void> {
-            enum Tag { Create, Free };
+            enum Tag { Borrow, Free };
         };
 
         template<>
         struct Designer<void, void>::Container<void, void> {
-            enum Tag { Create, Free };
+            enum Tag { Borrow, Free };
         };
 
         template<class PosUnitT, class SizeUnitT>
@@ -159,7 +159,7 @@ namespace GIDE
 
             virtual void drop(const ToolboxComponent& toolbox_component, Component& other_component)
             {
-                Component& component = CreateComponent(toolbox_component);
+                Component& component = BorrowComponent(toolbox_component);
 
                 if (other_component.widget().parent())
                     component.widget().parent(*other_component.widget().parent());
@@ -182,7 +182,7 @@ namespace GIDE
 
             Component& drop(const ToolboxComponent& toolbox_component)
             {
-                Component& component = CreateComponent(toolbox_component);
+                Component& component = BorrowComponent(toolbox_component);
 
                 component.widget().parent(widget());
 
@@ -222,7 +222,7 @@ namespace GIDE
         protected:
             ComponentCollection dropped_components;
 
-            static Component& CreateComponent(const ToolboxComponent& toolbox_component)
+            static Component& BorrowComponent(const ToolboxComponent& toolbox_component)
             {
                 struct lambdas
                 {
@@ -230,7 +230,7 @@ namespace GIDE
                     typedef ToolboxComponent ToolboxComponentT;
                     typedef Designer DesignerT;
 
-                    static ComponentT& Create(const ToolboxComponentT& toolbox_component)
+                    static ComponentT& Borrow(const ToolboxComponentT& toolbox_component)
                     {
                         struct DefaultComponent
                             : ComponentT
@@ -248,12 +248,12 @@ namespace GIDE
                         typedef GIDE::UI::Widgets::IButton<PosUnitT, SizeUnitT> DefaultWidget;
                         DefaultComponent* comp = new DefaultComponent();
                         comp->comp_type = &toolbox_component;
-                        comp->default_widget = &DefaultWidget::Create();
+                        comp->default_widget = &DefaultWidget::Borrow();
                         comp->default_widget->caption(comp->type().name());
                         return *comp;
                     }
                 };
-                return detail::Global(lambdas::Create).Get<CreateComponent>()(toolbox_component);
+                return detail::Global(lambdas::Borrow).Get<BorrowComponent>()(toolbox_component);
             }
         };
 
@@ -307,7 +307,7 @@ namespace GIDE
             virtual Toolbox& toolbox() {
                 struct DesignerToolbox : Toolbox {
                     typename Toolbox::Widget& tbwidget;
-                    DesignerToolbox() : tbwidget(Widgets::IWindow::Create()) {}
+                    DesignerToolbox() : tbwidget(Widgets::IWindow::Borrow()) {}
                     typename Toolbox::Widget& widget() const { return tbwidget; }
                 };
                 static DesignerToolbox result;
@@ -315,7 +315,7 @@ namespace GIDE
             }
 
             virtual Widget& widget() const {
-                static Widget& result = Widget::Create();
+                static Widget& result = Widget::Borrow();
                 return result;
             }
 
@@ -323,7 +323,7 @@ namespace GIDE
 
             virtual Form& form() {
                 
-                static Form &result = CreateForm(widget());
+                static Form &result = BorrowForm(widget());
                 return result;
             }
 
@@ -332,21 +332,21 @@ namespace GIDE
             // for Logging messages, default implementation uses GIDE::Abort and GIDE::Print
             virtual void log(const std::string& message, System::Log::Severity severity);
 
-            static Form& CreateForm(const typename Toolbox::Component& toolbox_component)
+            static Form& BorrowForm(const typename Toolbox::Component& toolbox_component)
             {
-                Form& (*CreateFormFunc)(const typename Toolbox::Component&) = CreateForm;
-                CreateFormFunc = detail::Global(CreateFormFunc).Get<CreateForm>();
-                if (CreateFormFunc != CreateForm)
-                    return CreateFormFunc(toolbox_component);
+                Form& (*BorrowFormFunc)(const typename Toolbox::Component&) = BorrowForm;
+                BorrowFormFunc = detail::Global(BorrowFormFunc).Get<BorrowForm>();
+                if (BorrowFormFunc != BorrowForm)
+                    return BorrowFormFunc(toolbox_component);
 
                 System::Abort(
-                    "GIDE internal error: GIDE::UI::Designer::Form::Create is not overridden: "
-                    "make sure to call GIDE::Override<GIDE::UI::Designer::Form::Create>(MyCreateFunction)"
+                    "GIDE internal error: GIDE::UI::Designer::Form::Borrow is not overridden: "
+                    "make sure to call GIDE::Override<GIDE::UI::Designer::Form::Borrow>(MyBorrowFunction)"
                 );
                 std::abort();
             }
 
-            static Form& CreateForm(Widget &parent)
+            static Form& BorrowForm(Widget &parent)
             {
                 struct DesignerForm :
                     Form
@@ -364,7 +364,7 @@ namespace GIDE
                 static std::vector<Form*> detault_forms;
                 
                 DesignerForm* form = new DesignerForm();
-                form->default_widget = &Form::Widget::Create(parent);
+                form->default_widget = &Form::Widget::Borrow(parent);
                 form->widget().parent(parent);
 
                 detault_forms.push_back(form);
@@ -391,13 +391,13 @@ namespace GIDE
 
                 if (!group_widgets.count(comp.group()))
                 {
-                    group_widgets[comp.group()] = &Designer::Widgets::Collapsible::Create();
+                    group_widgets[comp.group()] = &Designer::Widgets::Collapsible::Borrow();
                     widget().place(*group_widgets[comp.group()]);
                     group_widgets[comp.group()]->name(comp.group());
                     group_widgets[comp.group()]->caption(comp.group());
                 }
 
-                component_widgets[comp_ID] = &Designer::Widgets::Button::Create();
+                component_widgets[comp_ID] = &Designer::Widgets::Button::Borrow();
                 component_widgets[comp_ID]->parent( *group_widgets[comp.group()]);
                 component_widgets[comp_ID]->name(comp_ID);
                 component_widgets[comp_ID]->caption(comp.name());
@@ -517,49 +517,49 @@ namespace GIDE
         void Override(UI::Widgets::IBasic<PosUnitT, SizeUnitT>& (&value)())
         {
             typedef UI::Widgets::IBasic<PosUnitT, SizeUnitT> IBasic;
-            detail::Global(IBasic::Create).Get<IBasic::Create>() = value;
+            detail::Global(IBasic::Borrow).Get<IBasic::Borrow>() = value;
         }
 
         template<UI::Widgets::Window::Tag, class PosUnitT, class SizeUnitT>
         void Override(UI::Widgets::IWindow<PosUnitT, SizeUnitT>& (&value)())
         {
             typedef UI::Widgets::IWindow<PosUnitT, SizeUnitT> IWindow;
-            detail::Global(IWindow::Create).Get<IWindow::Create>() = value;
+            detail::Global(IWindow::Borrow).Get<IWindow::Borrow>() = value;
         }
 
         template<UI::Widgets::SubWindow::Tag, class PosUnitT, class SizeUnitT>
         void Override(UI::Widgets::ISubWindow<PosUnitT, SizeUnitT>& (&value)(UI::Widgets::IWindow<PosUnitT, SizeUnitT> &parent))
         {
             typedef UI::Widgets::ISubWindow<PosUnitT, SizeUnitT> ISubWindow;
-            detail::Global(ISubWindow::Create).Get<ISubWindow::Create>() = value;
+            detail::Global(ISubWindow::Borrow).Get<ISubWindow::Borrow>() = value;
         }
 
         template<UI::Widgets::Button::Tag, class PosUnitT, class SizeUnitT>
         void Override(UI::Widgets::IButton<PosUnitT, SizeUnitT>& (&value)())
         {
             typedef UI::Widgets::IButton<PosUnitT, SizeUnitT> IButton;
-            detail::Global(IButton::Create).Get<IButton::Create>() = value;
+            detail::Global(IButton::Borrow).Get<IButton::Borrow>() = value;
         }
 
         template<UI::Widgets::Collapsible::Tag, class PosUnitT, class SizeUnitT>
         void Override(UI::Widgets::ICollapsible<PosUnitT, SizeUnitT>& (&value)())
         {
             typedef UI::Widgets::ICollapsible<PosUnitT, SizeUnitT> ICollapsible;
-            detail::Global(ICollapsible::Create).Get<ICollapsible::Create>() = value;
+            detail::Global(ICollapsible::Borrow).Get<ICollapsible::Borrow>() = value;
         }
 
         template<UI::Widgets::Label::Tag, class PosUnitT, class SizeUnitT>
         void Override(UI::Widgets::ILabel<PosUnitT, SizeUnitT>& (&value)())
         {
             typedef UI::Widgets::ILabel<PosUnitT, SizeUnitT> ILabel;
-            detail::Global(ILabel::Create).Get<ILabel::Create>() = value;
+            detail::Global(ILabel::Borrow).Get<ILabel::Borrow>() = value;
         }
 
         template<UI::Widgets::Edit<void>::Tag, class PosUnitT, class SizeUnitT, class ValueT>
         void Override(UI::Widgets::IEdit<PosUnitT, SizeUnitT, ValueT>& (&value)())
         {
             typedef UI::Widgets::IEdit<PosUnitT, SizeUnitT, ValueT> IEdit;
-            detail::Global(IEdit::Create).Get<IEdit::Create>() = value;
+            detail::Global(IEdit::Borrow).Get<IEdit::Borrow>() = value;
         }
 
         template<GIDE::UI::Designer<void, void>::Form<void, void>::Tag, class PosUnitT, class SizeUnitT>
@@ -572,7 +572,7 @@ namespace GIDE
             {
                 static void Call(FuncT value)
                 {
-                    detail::Global(Designer::CreateForm).Get<Designer::CreateForm>() = value;
+                    detail::Global(Designer::BorrowForm).Get<Designer::BorrowForm>() = value;
                 }
             };
             Hack::Call(value);
@@ -589,7 +589,7 @@ namespace GIDE
             {
                 static void Call(FuncT value)
                 {
-                    detail::Global(Form::CreateComponent).Get<Form::CreateComponent>() = value;
+                    detail::Global(Form::BorrowComponent).Get<Form::BorrowComponent>() = value;
                 }
             };
             Hack::Call(value);

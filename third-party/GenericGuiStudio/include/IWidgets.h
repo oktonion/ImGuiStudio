@@ -20,11 +20,11 @@ namespace GIDE
         namespace Widgets
         {
             template<class WidgetT>
-            static WidgetT& Create()
+            static WidgetT& Borrow()
             {
                 System::Abort(
-                    "GIDE internal error: " + RTTI::TypeInfo<WidgetT>::Name() + "::Create is not overridden: "
-                    "make sure to call GIDE::Override<GIDE::Widgets::" + RTTI::TypeInfo<WidgetT>::Name() + "::Create>(MyCreateFunction)"
+                    "GIDE internal error: " + RTTI::TypeInfo<WidgetT>::Name() + "::Borrow is not overridden: "
+                    "make sure to call GIDE::Override<GIDE::Widgets::" + RTTI::TypeInfo<WidgetT>::Name() + "::Borrow>(MyBorrowFunction)"
                 );
                 std::abort();
             }
@@ -115,9 +115,9 @@ namespace GIDE
                     
                 // must have:
 
-                static IBasic& Create()
+                static IBasic& Borrow()
                 {
-                    return detail::Global(Widgets::Create<IBasic>).Get<Create>()();
+                    return detail::Global(Widgets::Borrow<IBasic>).Get<Borrow>()();
                 }
 
                 static void Free(IBasic& that)
@@ -218,9 +218,9 @@ namespace GIDE
                 typedef typename Widget::SizeUnit SizeUnit;
                 typedef typename Widget::Position2DUnit Position2DUnit;
 
-                static IWindow& Create()
+                static IWindow& Borrow()
                 {
-                    return detail::Global(Widgets::Create<IWindow>).Get<Create>()();
+                    return detail::Global(Widgets::Borrow<IWindow>).Get<Borrow>()();
                 }
 
                 static void Free(IWindow& that)
@@ -250,17 +250,17 @@ namespace GIDE
             struct ISubWindow
                 : IWindow<PosUnitT, SizeUnitT>
             {
-                static ISubWindow& Create(IWindow<PosUnitT, SizeUnitT> &parent)
+                static ISubWindow& Borrow(IWindow<PosUnitT, SizeUnitT> &parent)
                 {
                     struct lambdas
                     {
                         typedef ISubWindow type;
-                        static type& Create(IWindow<PosUnitT, SizeUnitT>&)
+                        static type& Borrow(IWindow<PosUnitT, SizeUnitT>&)
                         {
-                            return GIDE::Implement::Widgets::Create<type>();
+                            return GIDE::Implement::Widgets::Borrow<type>();
                         }
                     };
-                    return detail::Global(lambdas::Create).Get<Create>()(parent);
+                    return detail::Global(lambdas::Borrow).Get<Borrow>()(parent);
                 }
 
                 static void Free(ISubWindow& that)
@@ -281,9 +281,9 @@ namespace GIDE
 
                 // must have:
 
-                static ICollapsible& Create()
+                static ICollapsible& Borrow()
                 {
-                    return detail::Global(Widgets::Create<ICollapsible>).Get<Create>()();
+                    return detail::Global(Widgets::Borrow<ICollapsible>).Get<Borrow>()();
                 }
 
                 static void Free(ICollapsible& that)
@@ -317,9 +317,9 @@ namespace GIDE
 
                 // must have:
 
-                static IButton& Create()
+                static IButton& Borrow()
                 {
-                    return detail::Global(Widgets::Create<IButton>).Get<Create>()();
+                    return detail::Global(Widgets::Borrow<IButton>).Get<Borrow>()();
                 }
 
                 static void Free(IButton& that)
@@ -347,9 +347,9 @@ namespace GIDE
             {
                 typedef ValueT  ValueType;
 
-                static IEdit& Create()
+                static IEdit& Borrow()
                 {
-                    return detail::Global(Widgets::Create<IEdit>).Get<Create>()();
+                    return detail::Global(Widgets::Borrow<IEdit>).Get<Borrow>()();
                 }
 
                 static void Free(IEdit& that)
@@ -384,9 +384,9 @@ namespace GIDE
 
                 // must have:
 
-                static ILabel& Create()
+                static ILabel& Borrow()
                 {
-                    return detail::Global(Widgets::Create<ILabel>).Get<Create>()();
+                    return detail::Global(Widgets::Borrow<ILabel>).Get<Borrow>()();
                 }
 
                 static void Free(ILabel& that)

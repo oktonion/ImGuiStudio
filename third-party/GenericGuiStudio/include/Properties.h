@@ -14,6 +14,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <memory>
 
 namespace GIDE
 {
@@ -68,7 +69,7 @@ namespace GIDE
         template<>
         struct Properties<void, void> {
             struct Property {
-                enum Tag { Create };
+                enum Tag { Borrow };
             };
         };
 
@@ -90,15 +91,47 @@ namespace GIDE
                 typedef GIDE::Properties::Property<PropertiesType, T> Base;
                 typedef typename Base::ValueType ValueType;
                 typedef GIDE::Implement::Widgets::IEdit<PosUnitT, SizeUnitT, ValueType> Widget;
+                typedef std::shared_ptr<Widget> WidgetPtr;
 
-                virtual Widget& widget() = 0;
+                struct WidgetDeleter {
+                    void operator()(Widget* that) const
+                    {
+                        return that->free();
+                    }
+                };
+
+                virtual Widget& widget() {
+                    WidgetPtr& w_ptr = Widgets()[this->name()];
+                    if (!w_ptr)
+                        w_ptr.reset(&Widget::Borrow(), WidgetDeleter());
+                    return *w_ptr;
+                }
+
+                void free() {
+                    WidgetPtr& w_ptr = Widgets()[this->name()];
+                    if (w_ptr)
+                    {
+                        Widget& w = *w_ptr;
+                        if (&w == &widget() && w_ptr.unique())
+                            w_ptr.reset();
+                    }
+                }
+
+            protected:
+                static std::map<std::string, WidgetPtr> &Widgets()
+                {
+                    
+                    static std::map<std::string, WidgetPtr> widgets;
+
+                    return widgets;
+                }
             };
 
             virtual std::map<std::string, Group>& groups() {
                 static std::map<std::string, Group>
                     result; return result;
             }
-            virtual Widget& widget() { static Widget& result = Widget::Create(); return result; }
+            virtual Widget& widget() { static Widget& result = Widget::Borrow(); return result; }
 
             void add(const std::string& group_name, IProperty& property)
             {
@@ -151,6 +184,7 @@ namespace GIDE
 
         virtual Type type() = 0;
         virtual std::string name() const = 0;
+        virtual void free() = 0;
 
         template<Type T>
         void value(const typename Traits<WidgetType, T>::ValueType& val)

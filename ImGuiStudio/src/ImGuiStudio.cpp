@@ -21,16 +21,16 @@ namespace ImGuiStudio
         struct MainWindow;
     }
 
-    static Widgets::Window& CreateWindow(Widgets::Window& parent);
+    static Widgets::Window& BorrowWindow(Widgets::Window& parent);
 
-    static Widgets::Collapsible& CreateCollapsible(Widgets::Window& parent);
+    static Widgets::Collapsible& BorrowCollapsible(Widgets::Window& parent);
 
-    static Widgets::Button& CreateButton(Widgets::Window& parent);
+    static Widgets::Button& BorrowButton(Widgets::Window& parent);
 
     template<class ValueT>
-    static Widgets::Edit<ValueT>& CreateEdit(Widgets::Window& parent);
+    static Widgets::Edit<ValueT>& BorrowEdit(Widgets::Window& parent);
 
-    static Widgets::SubWindow& CreateSubWindow(Widgets::Window& parent);
+    static Widgets::SubWindow& BorrowSubWindow(Widgets::Window& parent);
 
     namespace MainWindow
     {
@@ -126,7 +126,7 @@ namespace ImGuiStudio
         return ++result;
     }
 
-    static Widgets::Window& CreateWindow(Widgets::Window& parent)
+    static Widgets::Window& BorrowWindow(Widgets::Window& parent)
     {
         static std::map<std::size_t, Widgets::Window> windows;
         std::size_t id = widget_id();
@@ -136,7 +136,7 @@ namespace ImGuiStudio
         return result;
     }
 
-    static Widgets::Collapsible& CreateCollapsible(Widgets::Window& parent)
+    static Widgets::Collapsible& BorrowCollapsible(Widgets::Window& parent)
     {
         static std::map<std::size_t, Widgets::Collapsible> collapsibles;
         std::size_t id = widget_id();
@@ -146,7 +146,7 @@ namespace ImGuiStudio
         return result;
     }
 
-    static Widgets::Button& CreateButton(Widgets::Window& parent)
+    static Widgets::Button& BorrowButton(Widgets::Window& parent)
     {
         static std::map<std::size_t, Widgets::Button> buttons;
         std::size_t id = widget_id();
@@ -157,7 +157,7 @@ namespace ImGuiStudio
     }
 
     template<class ValueT>
-    static Widgets::Edit<ValueT>& CreateEdit(Widgets::Window& parent)
+    static Widgets::Edit<ValueT>& BorrowEdit(Widgets::Window& parent)
     {
         typedef Widgets::Edit<ValueT> Edit;
         static std::map<std::size_t, Edit> edits;
@@ -168,7 +168,7 @@ namespace ImGuiStudio
         return result;
     }
 
-    static Widgets::SubWindow& CreateSubWindow(Widgets::Window& parent)
+    static Widgets::SubWindow& BorrowSubWindow(Widgets::Window& parent)
     {
         static std::map<std::size_t, Widgets::SubWindow> subwindows;
         std::size_t id = widget_id();
@@ -217,37 +217,37 @@ void ImGuiStudio::Init()
     {
         struct lambdas
         {
-            static UI::Widgets::IWindow& CreateWindow()
+            static UI::Widgets::IWindow& BorrowWindow()
             {
-                return ImGuiStudio::CreateWindow(ImGuiStudio::MainWindow::Instance());
+                return ImGuiStudio::BorrowWindow(ImGuiStudio::MainWindow::Instance());
             }
 
-            static UI::Widgets::ISubWindow& CreateSubWindow(UI::Widgets::IWindow& parent)
+            static UI::Widgets::ISubWindow& BorrowSubWindow(UI::Widgets::IWindow& parent)
             {
-                return ImGuiStudio::CreateSubWindow(dynamic_cast<ImGuiStudio::Widgets::Window&>(parent));
+                return ImGuiStudio::BorrowSubWindow(dynamic_cast<ImGuiStudio::Widgets::Window&>(parent));
             }
 
-            static UI::Widgets::IButton& CreateButton()
+            static UI::Widgets::IButton& BorrowButton()
             {
-                return ImGuiStudio::CreateButton(ImGuiStudio::MainWindow::Instance());
+                return ImGuiStudio::BorrowButton(ImGuiStudio::MainWindow::Instance());
             }
 
-            static UI::Widgets::ICollapsible& CreateCollapsible()
+            static UI::Widgets::ICollapsible& BorrowCollapsible()
             {
-                return ImGuiStudio::CreateCollapsible(ImGuiStudio::MainWindow::Instance());
+                return ImGuiStudio::BorrowCollapsible(ImGuiStudio::MainWindow::Instance());
             }
 
-            static UI::Widgets::IEdit<float>& CreateFloatEdit()
+            static UI::Widgets::IEdit<float>& BorrowFloatEdit()
             {
-                return ImGuiStudio::CreateEdit<float>(ImGuiStudio::MainWindow::Instance());
+                return ImGuiStudio::BorrowEdit<float>(ImGuiStudio::MainWindow::Instance());
             }
         };
 
-        GIDE::RTTI::Override<GIDE::UI::Widgets::Window::Create>(lambdas::CreateWindow);
-        GIDE::RTTI::Override<GIDE::UI::Widgets::SubWindow::Create>(lambdas::CreateSubWindow);
-        GIDE::RTTI::Override<GIDE::UI::Widgets::Button::Create>(lambdas::CreateButton);
-        GIDE::RTTI::Override<GIDE::UI::Widgets::Collapsible::Create>(lambdas::CreateCollapsible);
-        GIDE::RTTI::Override<GIDE::UI::Widgets::Edit<float>::Create>(lambdas::CreateFloatEdit);
+        GIDE::RTTI::Override<GIDE::UI::Widgets::Window::Borrow>(lambdas::BorrowWindow);
+        GIDE::RTTI::Override<GIDE::UI::Widgets::SubWindow::Borrow>(lambdas::BorrowSubWindow);
+        GIDE::RTTI::Override<GIDE::UI::Widgets::Button::Borrow>(lambdas::BorrowButton);
+        GIDE::RTTI::Override<GIDE::UI::Widgets::Collapsible::Borrow>(lambdas::BorrowCollapsible);
+        GIDE::RTTI::Override<GIDE::UI::Widgets::Edit<float>::Borrow>(lambdas::BorrowFloatEdit);
     }
 
     Designer::Init();

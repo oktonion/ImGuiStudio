@@ -292,7 +292,7 @@ namespace ImGuiStudio
         Widgets::DesignerWidget default_widget;
         const ToolboxComponent* comp_type;
 
-        static DesignerComponent& Create(const ToolboxComponent& tbcomp)
+        static DesignerComponent& Borrow(const ToolboxComponent& tbcomp)
         {
             static std::map<std::string, std::list<DesignerComponent>/**/> components;
             components[tbcomp.ID()].resize(components[tbcomp.ID()].size() + 1);
@@ -316,11 +316,11 @@ void ImGuiStudio::Designer::Init()
 
     struct lambdas
     {
-        static Form::Component& Create(const Toolbox::Component& tbcomp)
+        static Form::Component& Borrow(const Toolbox::Component& tbcomp)
         {
-            return DesignerComponent::Create(tbcomp);
+            return DesignerComponent::Borrow(tbcomp);
         }
     };
 
-    GIDE::RTTI::Override<Form::Component::Create>(lambdas::Create);
+    GIDE::RTTI::Override<Form::Component::Borrow>(lambdas::Borrow);
 }
